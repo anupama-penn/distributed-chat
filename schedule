@@ -1,0 +1,35 @@
+Date Modified: 03/21/2016
+
+
+--------------Schedule---------------
+Finish me by March 28th
+
+Contact TA to setup meeting by April 2nd
+
+Finish Milestone 2 by April 11th
+	--Handle addition and deletion of members
+	--Send and receive messages across members
+	--Ideally the core system functionality should be finished by now
+
+Finish Final Milestone by April 24th
+	--Implement extra credits (TBD)
+
+Final demo on April 25th
+
+
+
+-----Protocals-----
+Message protocal: RPC on top of UDP
+
+Message type: char ** sender_name, char ** message_body, char *** timestamps
+	(Time stamps are char *, and array of timestamps is a char **, and since RPC requires pointers to these structures the final type being passed is a char ***)
+
+Vector time stamps: These functions both for ordering messages and to recognize lost messages. For the lost messages, if the timestamp vector indicates that some messages have been delivered in between the client's last printed message and the one being currently recieved then it will hold back printing the incoming message for a perioud of time while it receievd the delayed intermediate messages. If after a waiting period the client has not received these missing messages then it broadcasts a request to all other clients to send the missing intervening messages. 
+
+Leader Election Protocal: All clients are broadcasting an 'I am alive' message to other clients. This means that all clients ar eexpecting periodic 'I am alive' messages from one another.
+	These messages at minimum consist of their name (char **) and may contain time stamp information. Each client has a thread running which is aware of the time, and both sends outgoing broadcasts and receives incomming messages of this type. When a client X misses enough check-ins from another client Y, then X assumes that Y has died (or potentially send a request for information to Y as a final attempt). If Y was the leader then X broadcasts a 'hold election' message. If Y is not in fact dead it will reply to the election message and the election will be cancelled. Otherwise the election process is an implementation of the bully algorithm where IDs are assigned based on when the client joined the chat. This will cause the oldest surviving chat member to be elected the leader, and naturally the initial state is that the client which created the chat is the leader.
+
+
+
+
+Name states and write out process flow chart
