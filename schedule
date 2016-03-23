@@ -33,3 +33,35 @@ Leader Election Protocal: All clients are broadcasting an 'I am alive' message t
 
 
 Name states and write out process flow chart
+
+
+
+// This is my version of the prtocol design and handling of failure
+
+Unreliable chat	
+Multicast Protocol design :
+Main thread forks and executes RPC registration which will listen for incoming client requests in the background all the time. ( Assign leader here )
+RPC is only invoked by clients on the IP address and port number of leader. There has to be a list of chat participants maintained by leader .
+Client has 3 threads: 
+- init data structures / listen to user input 
+- listen for incoming UDP socket connections from leader / handle new messages/ request undelivered messages  
+- check if leader is still alive
+ 
+LEADER:
+ordering incoming messages from each client - send/multicast it
+maintain a buffer of recent messages in case of retransmission - sequence number
+detect crash/ exiting users
+
+CLIENT :
+display messages relayed from leader in order ( total ordering ) according to the sequence number in the message
+maintain list of other chat participants
+
+A QUEUE thread
+Calls RPC at regular intervals to make sure that leader is still alive 
+Inform leader that its still alive
+Call an election 
+
+HANDLING FAILURE 
+Leader dead / temp connection issue  Clients retry contacting leader ( say 5 times ) . In case of temp failure, leader has to somehow re-assert itself? More discussion needed.
+Client dead / temp connection issue
+	leader assumes client is dead and multicasts it but finally client rejoins chat .
