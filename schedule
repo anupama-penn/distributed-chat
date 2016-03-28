@@ -92,7 +92,23 @@ This section defines the bookkeeping process of checking who is still connected 
 
 ###Election Protocol
 
-This section defines how leadership elections work in the likely event of our leader's untimely death
+This section defines how leadership elections work in the likely event of our leader's untimely death. Once a client detects the death of a leader, it sends a start election message to everyone
+
+1. <sender>: name
+2. <uid>: IP
+3. <mssage type>: ELECTION
+4. <packet#>: 0
+5. <total # packets>: 1
+6. <message body>: none
+
+Ranking is based on IP. Clients respond with vote messages containing an approve or reject. IPs lower than the candidate will reject.
+
+1. <sender>: name
+2. <uid>: IP
+3. <mssage type>: VOTE
+4. <packet#>: 0
+5. <total # packets>: 1
+6. <message body>: "approve" or "reject"
 
 ###Connection Protocol
 
@@ -114,7 +130,7 @@ Leader Info
 3. <message type>: LEADER_INFO
 4. <packet#>: 0
 5. <total # packets>: 1
-6. <message body>: leader IP
+6. <message body>: leader ip
 
 When the leader receives a join request, it broadcasts a join message to all the clients including the new one to announce the new chat member. At this point, the clients can begin expecting checkups from the new member. Clients will print the original introduction message from the new client's join request
 
@@ -124,8 +140,11 @@ Join
 3. <mssage type>: JOIN
 4. <packet#>: packet number
 5. <total # packets>: number of packets in message
-6. <message body>: a friendly user defined welcome message
+6. <message body>: a friendly user defined welcome message and list of IPs of all the clients and a sequence number
 
+The new client can start printing messages that are larger than the sequence number received. This sequence number is the number of the last message the leader sequenced before the new client joined.
+
+If a client starts receiving checkups from a client it's never heard of before, it sends an inquiry to the leader by forwarding the checkup to the leader. If the leader hasn't heard of the client either, it doesn't respond. If it has heard of the client, it sends the inquiring client the JOIN message again.
 
 ##Leader Roles
 
