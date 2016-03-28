@@ -157,9 +157,7 @@ If a client starts receiving checkups from a client it's never heard of before, 
 
 
 
-##Protocol States
-
-###Sequencing
+##Example Cases
 
 ####What if a client is missing a message?
 
@@ -175,3 +173,30 @@ When the new client receives its JOIN message, the JOIN message comes with a seq
 
 Drop them! They're orphans now! But that should be avoided if possible. The new leader should judiciously sequence whwatever it has by timestamp. Then the clients can start asking as described above for how to handle their unsequenced messages. Yes.
 
+
+##Implementation Notes
+
+At least three threads
+1. Chat Message Thread for handling user-visible message exchange
+2. Bookkeeping Thread for handling all other messaging except for
+3. Checkup Timing Thread for periodically sending out checkup messages
+
+##Division of Labor
+
+###Spencer
+
+Spencer will do election stuff (thread 2)
+Spencer shall do new client stuff
+
+###Jordan
+
+Jordan will do message stuff (thread 1)
+Jordan, he will do UI stuff
+
+###Anupama
+
+Anupama will do checkup stuff (thread 3)
+
+###Everyone
+
+Everyone will meet periodically for group code review and refactoring (refactor mercilessly)
