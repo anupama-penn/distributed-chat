@@ -46,18 +46,86 @@ Messages components will be newline delimited. This is safe given user input fro
 ..* usually 0 because most messages should be short
 5. <total # packets expected> How many packets are expected for this message
 ..* generally 1, but could be larger for larger messages
+6. <message body>: any additional message contents
 
 ###Chat Messaging Protocol
 
-This section defines how chat messages are sent 
+This section defines how chat messages are sent. 
+
+Messages will be multicast via UDP using the protocol defined above. 
+
+Specifically,
+1. <sender>: who sent this message
+..* helpful in a multicast environment
+2. <uid>: unique identifier
+..* including a timestamp; set by sender
+3. <message type>: CHAT
+4. <packet #>
+..* Can vary for larger chat messages
+5. <total # packets expected> How many packets are expected for this message
+..* generally 1 because most chat messages will be under our UDP packet limit
+6. <message body> what the client wants to say.
+
+Because we're using a central sequencer, we need an auxiliary message to help with ordering. Here's the idea.
+
+A sender multicasts a message. Everyone (hopefully) receives it and adds it to a message queue. When the leader receives it, it assigns it a sequence number. It then broadcasts the follow message to indicate how everyone should order it. They then pull the appropriate message from their queue and display it.
+
+1. <sender>: the leader
+2. <uid>: unique identifier of original CHAT message
+3. <message type>: SEQUENCE
+4. <packet #>: 0
+5. <total # packets expected>: 1
+6. <message body>: sequence #
+
+If a client finds that it's missing a message given the sequence numbers, it can request it from the leader by sending the leader a SEQUENCE message back. The leader will then send it the appropriate CHAT message
 
 ###Checkup Protocol
 
-This section defines the bookkeeping process of checking who is still connected to chat
+This section defines the bookkeeping process of checking who is still connected to chat. Chat clients should periodically multicast their existence. If a fixed number of these checkups are missed, the user is considered dead. If the leader is found to be dead, an election begins.
+
+1. <sender>: client name
+2. <uid>: associated IP address
+3. <message type>: CHECKUP
+4. <packet#>: 0
+5. <total # packets>: 1
+6. <message body>: empty
 
 ###Election Protocol
 
 This section defines how leadership elections work in the likely event of our leader's untimely death
+
+###Connection Protocol
+
+This section defines how new clients are added to the chat.
+
+A new client initially sends a join request message to any client. If that client is not a leader, it sends a leader info message back to the new client which then sends a join request to the leader.
+
+Join Request
+1. <sender>: new client name
+2. <uid>: new client's IP
+3. <mssage type>: JOIN_REQUEST
+4. <packet#>: packet number
+5. <total # packets>: number of packets in message
+6. <message body>: a friendly user defined introduction message
+
+Leader Info
+1. <sender>: the client who received the join request
+2. <uid>: the IP of that client
+3. <message type>: LEADER_INFO
+4. <packet#>: 0
+5. <total # packets>: 1
+6. <message body>: leader IP
+
+When the leader receives a join request, it broadcasts a join message to all the clients including the new one to announce the new chat member. At this point, the clients can begin expecting checkups from the new member. Clients will print the original introduction message from the new client's join request
+
+Join
+1. <sender>: the leader
+2. <uid>: the leader IP
+3. <mssage type>: JOIN
+4. <packet#>: packet number
+5. <total # packets>: number of packets in message
+6. <message body>: a friendly user defined welcome message
+
 
 ##Leader Roles
 
