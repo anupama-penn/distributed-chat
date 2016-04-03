@@ -20,17 +20,23 @@
 #include <signal.h>
 #include <stdint.h>
 
-#include "dchat.h"
-#include "holdback_queue.h"
+//#include "dchat.h"
+//#include "holdback_queue.h"
+#include "queue.h"
 
 #define QUEUE_SIZE 128
 #define INITIAL_CLIENT_COUNT 8
 #define MSGBUFSIZE 256
 
 
+//Message types
+enum bool_t {TRUE=1,FALSE=0};
+enum packettype_t { CHAT = 0, SEQUENCE = 1, CHECKUP = 2, ELECTION = 3, VOTE = 4, VICTORY = 5, JOIN_REQUEST = 6, LEADER_INFO = 7, JOIN = 8};
+//
+
 void error(char *x){
-    perror(x);
-    exit(1);
+  perror(x);
+  exit(1);
 }
 
 
@@ -48,10 +54,90 @@ const int LOCALPORT = 2886;
 cname userdata;
 char buf[BUFLEN];
 
+const int MAXSENDERLEN = 64;
+const int MAXUIDLEN = 128;
+const int MAXPACKETLEN = 1024;
+const int MAXPACKETBODYLEN = MAXPACKETLEN-MAXSENDERLEN-MAXUIDLEN-(2*sizeof(int))-sizeof(packettype_t)-(5*sizeof(char));
+const int MESSAGEMULTIPLIER = 10;
+const int MAXCHATMESSAGELEN = MAXPACKETBODYLEN*MESSAGEMULTIPLIER;
+
+static llist_t* UNSEQ_CHAT_MSGS;
+
+typedef struct packet_t {
+  char sender[MAXSENDERLEN];
+  char uid[MAXUIDLEN];
+  packettype_t packettype;
+  int packetnum;
+  int totalpackets;
+  int packetbody[MAXPACKETBODYLEN];
+} packet_t;
+
+typedef struct chatmessage_t {
+  int seqnum;
+  int numpacketsexpected;
+  bool_t iscomplete;
+  bool_t packetsreceived[MESSAGEMULTIPLIER];//indicates which packets have been received
+  char sender[MAXSENDERLEN];
+  char uid[MAXUIDLEN];
+  char messagebody[MAXCHATMESSAGELEN];
+} chatmessage_t;
+
+bool_t check_chatmessage_completeness(chatmessage_t* message)
+{
+  int max = message->numpacketsexpected;
+  int i;
+  for(i = 0; i < max; i++)
+  {
+    if(message->packetsreceived[i] == FALSE)
+      return FALSE;
+  }
+  return TRUE;
+}
+
+//create a new chatmessgae given a packet
+chatmessage_t* create_chatmessage(packet_t* newpacket)
+{
+  chatmessage_t* message = malloc(sizeof(chatmessage));
+  message->seqnum = -1;
+  message->numpacketsexpected = newpacket->totalpackets;
+  message->iscomplete = FALSE;
+  strcpy(message->sender,newpacket->sender);
+  strcpy(message->uid,newpacket->uid);
+
+  //indicate which packet has been received
+  message->packetsreceived = {FALSE};
+  message->packetsreceived[newpacket->packetnum] = TRUE;
+
+  //copy over messagebody 
+  strncpy(message->messagebody[newpacket->packetnum*MAXPACKETBODYLEN], newpacket->packetbody, MAXPACKETBODYLEN);
+
+  //check if message is complete
+  message->iscomplete = check_chatmessage_completeness(message);
+
+  return message;
+  
+}
+
+//add this CHAT packet's contents to the appropriate chat message
+//returns whether or not this message is now complete
+bool_t append_to_chatmessage(chatmessage_t* message, packet_t* newpacket)
+{
+  message->packetsreceived[newpacket->packetnum] = TRUE;
+
+  //copy over messagebody 
+  strncpy(message->messagebody[newpacket->packetnum*MAXPACKETBODYLEN], newpacket->packetbody, MAXPACKETBODYLEN);
+
+  //check if message is complete
+  message->iscomplete = check_chatmessage_completeness(message);
+
+  return message->iscomplete;
+}
+
+
 // comparing sequence number of messages to print it acc to total ordering
 int message_compare(const void*message1, const void*message2){
     
-    if( ((msg_recv*)message1)->seq_num > ((msg_recv*)message2)->seq_num ) {
+  if( ((msg_recv*)message1)->seq_num > ((msg_recv*)message2)->seq_num ) {
         return 1;
     }
     else if ((msg_recv*)message1)->seq_num < ((msg_recv*)message2)->seq_num ){
@@ -63,33 +149,26 @@ int message_compare(const void*message1, const void*message2){
 
 // chack if input is of-> enum msg_type_t {TEXT = 0, NEWUSER = 1, USEREXIT = 2, ELECTION = 3};
 
-msg_recv* parseMessage(char *buf){
-    
-    msg_recv* input = malloc(sizeof(msg_recv));
-    
-    if ((*input).msg_type == TEXT) {
-        
-        
-      //  (*input).seq_num =
-      //  (*input).user_sent =
-      //  (*input).msg_sent =
-        
-        return input;
-    }
-    
-    if ((*input).msg_type == NEWUSER) {
-       // statements;
-    }
-    
-    
-    if ((*input).msg_type == USEREXIT) {
-       // statements;
-    }
-    
-    if ((*input).msg_type == ELECTION) {
-        // statements;
-    }
-    
+packet* parsePacket(char *buf){
+  packet_t* input = malloc(sizeof(packet));
+  strcpy(input->sender,strtok(buf,"\n"));
+  strcpy(input->uid,strtok(buf,"\n"));
+  input->packettype = atoi(strtok(buf,"\n"));
+  input->packetnum = atoi(strtok(buf,"\n"));
+  input->totalpackets = atoi(strtok(buf,"\n"));
+  strcpy(input->packetbody,strtok(buf,"\n"));
+  return input;
+}
+
+chatmessage_t* find_chatmessage(char[] uid)
+{
+  node_t* curr = UNSEQ_CHAT_MESSAGES->head;
+  while(curr != NULL)
+  {
+    if(strcmp(uid, ((chatmessage_t*)curr->elem)->uid) == 0)
+      return ((chatmessage_t*)curr->elem)
+  }
+  return NULL;
 }
 
 void receive_UDP_packet(){
@@ -130,6 +209,66 @@ void receive_UDP_packet(){
             perror("recvfrom");
             exit(1);
         }
+
+	packet_t* newpacket = parsePacket(&buf);
+	
+	//figure out what type of packet this is and act accordingly
+	switch(newpacket->packettype)
+	{
+	case CHAT:
+	  //figure out if this corresponds to an existing chatmessage
+	  chatmessage_t* message = find_chatmessage(newpacket->uid);
+
+	  //if so, and if the message is not complete, add this packet's contents to it
+	  //if not, create a new chatmessage
+	  bool_t completed = FALSE;
+	  if(message)
+	    completed = append_to_chatmessage(existingmessage, newpacket);
+	  else
+	  {
+	    message = create_chatmessage(newpacket);
+	    completed = newmessage->iscomplete;
+	    add_elem(UNSEQ_CHAT_MSGS, (void*)newmessage);
+	  }
+
+	  //for now, just print if it's complete
+	  if(completed)
+	    printf("\E[34m%s\E(B\E[m:\t%s\n", message->sender, message->messagebody);
+
+	  //if am the leader, prep and send a sequencing message for this chatmessage
+	  //if not, put it in the unsequenced message list until further notice
+	  break;
+	case SEQUENCE:
+	  //This is a sequencing message. Find the corresponding chat message in the unsequenced message list and enqueue it properly
+	  break;
+	case CHECKUP:
+	  break;
+	case ELECTION:
+	  break;
+	case VOTE:
+	  break;
+	case VICTORY:
+	  break;
+	case JOIN_REQUEST:
+	  break;
+	case LEADER_INFO:
+	  break;
+	case JOIN:
+	  break;
+	default:
+	  printf("\nUnrecognized packet type: %d\n", newpacket->packettype);
+	}
+
+
+
+
+
+
+
+
+
+	//begin sequencing stuff from 
+	/*
         
         msg_recv* message_got = parseMessage(&buf);
         
@@ -158,7 +297,7 @@ void receive_UDP_packet(){
         
         squence ++;
         printf("%s: %s\n", (*next_message_got).user_sent, (*next_message_got).msg_sent);
-        
+        */
         
     }//end of while
     
@@ -241,12 +380,13 @@ int main(int argc, char* argv[]){
     userdata.lport = LOCALPORT;
     userdata.leader_flag = isSequencer;
     
-    clientlist = malloc(sizzeof(clist));
+    clientlist = malloc(sizeof(clist));
     clientlist->clientlist.clientlist_len = 0;
     alloc_clients_size = INITIAL_CLIENT_COUNT;
     cname *list_values = (cname*)calloc((size_t)INITIAL_CLIENT_COUNT, sizeof(cname));
-    
+
     clientlist->clientlist.clientlist_val = list_values;
     
-    
+    llist_t* UNSEQ_CHAT_MSGS = (llist_t*) malloc(sizeof(llist_t));
+    init_list(UNSEQ_CHAT_MSGS);
 }
