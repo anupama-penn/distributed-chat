@@ -51,7 +51,7 @@ chatmessage_t* create_chatmessage(packet_t* newpacket)
 
   return message;
 }
-/*
+
 //add this CHAT packet's contents to the appropriate chat message
 //returns whether or not this message is now complete
 bool_t append_to_chatmessage(chatmessage_t* message, packet_t* newpacket)
@@ -67,7 +67,7 @@ bool_t append_to_chatmessage(chatmessage_t* message, packet_t* newpacket)
   return message->iscomplete;
 }
 
-
+/*
 // comparing sequence number of messages to print it acc to total ordering
 int message_compare(const void*message1, const void*message2){
     
@@ -79,7 +79,7 @@ int message_compare(const void*message1, const void*message2){
     }
     else return 0;
 }
-
+*/
 
 // chack if input is of-> enum msg_type_t {TEXT = 0, NEWUSER = 1, USEREXIT = 2, ELECTION = 3};
 
@@ -104,7 +104,7 @@ chatmessage_t* find_chatmessage(char[] uid)
   }
   return NULL;
 }
-
+/*
 void receive_UDP_packet(){
     
     
