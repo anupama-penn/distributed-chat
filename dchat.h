@@ -26,6 +26,10 @@
 #define MESSAGEMULTIPLIER 10
 #define MAXCHATMESSAGELEN MAXPACKETBODYLEN*MESSAGEMULTIPLIER
 
+#define PACKETDELIM "\n"
+
+#define LOCALPORT 2886
+
 enum bool
 {
   FALSE=0,
@@ -49,15 +53,15 @@ typedef enum packettype packettype_t;
 void getLocalIp(char*);
 void holdElection();
 
-/*
-int isSequencer = 0;
-int alloc_clients_size;
 
-clist *clientlist;p
+//int isSequencer = 0;
+//int alloc_clients_size;
 
-const int LOCALPORT = 2886;
-cname userdata;
-char buf[1024];*/
+//clist *clientlist;
+
+
+//cname userdata;
+static char buf[1024];
 
 static llist_t* UNSEQ_CHAT_MSGS;
 
@@ -148,7 +152,7 @@ bool_t append_to_chatmessage(chatmessage_t*, packet_t*);
 //int message_compare(const void* varname, const void*);
 
 // chack if input is of-> enum msg_type_t;TEXT = 0, NEWUSER = 1, USEREXIT = 2, ELECTION = 3};
-//packet_t* parsePacket(char*);
+packet_t* parsePacket(char*);
 
 //chatmessage_t* find_chatmessage(char[])
 
