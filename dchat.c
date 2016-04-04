@@ -1,5 +1,13 @@
 #include "dchat.h"
 
+/*enum bool
+{
+  FALSE=0,
+  TRUE=1
+};
+typedef enum bool bool_t;*/
+//
+
 void error(char *x){
   perror(x);
   exit(1);
@@ -18,10 +26,11 @@ bool_t check_chatmessage_completeness(chatmessage_t* message)
   return TRUE;
 }
 
+
 //create a new chatmessgae given a packet
 chatmessage_t* create_chatmessage(packet_t* newpacket)
 {
-  chatmessage_t* message = malloc(sizeof(chatmessage));
+  chatmessage_t* message = malloc(sizeof(chatmessage_t));
   message->seqnum = -1;
   message->numpacketsexpected = newpacket->totalpackets;
   message->iscomplete = FALSE;
@@ -29,7 +38,9 @@ chatmessage_t* create_chatmessage(packet_t* newpacket)
   strcpy(message->uid,newpacket->uid);
 
   //indicate which packet has been received
-  message->packetsreceived = {FALSE};
+  int i;
+  for(i = 0; i < MESSAGEMULTIPLIER; i++)
+    message->packetsreceived[i] = FALSE;
   message->packetsreceived[newpacket->packetnum] = TRUE;
 
   //copy over messagebody 
@@ -39,9 +50,8 @@ chatmessage_t* create_chatmessage(packet_t* newpacket)
   message->iscomplete = check_chatmessage_completeness(message);
 
   return message;
-  
 }
-
+/*
 //add this CHAT packet's contents to the appropriate chat message
 //returns whether or not this message is now complete
 bool_t append_to_chatmessage(chatmessage_t* message, packet_t* newpacket)
@@ -114,7 +124,7 @@ void receive_UDP_packet(){
     memset(&addr,0,sizeof(addr));
     addr.sin_family=AF_INET;
     addr.sin_addr.s_addr=htonl(INADDR_ANY); /* N.B.: differs from sender */
-    addr.sin_port=htons(LOCALPORT);
+/*    addr.sin_port=htons(LOCALPORT);
     
     //bind to receive address
     
@@ -222,7 +232,7 @@ void receive_UDP_packet(){
         squence ++;
         printf("%s: %s\n", (*next_message_got).user_sent, (*next_message_got).msg_sent);
         */
-        
+/*        
     }//end of while
     
 }
@@ -563,10 +573,11 @@ void shutdown(){
     return NULL;
 }
 
-
+*/
 int main(int argc, char* argv[]){
     
-    pid_t pID = fork();
+  return 0;
+  /*    pid_t pID = fork();
     if (pID == 0) {
         execlp("./dchat", NULL, (char*) 0);
     }
@@ -598,7 +609,7 @@ int main(int argc, char* argv[]){
     userdata.hostname = (hoststr) localHostname;
     userdata.lport = LOCALPORT;
     userdata.leader_flag = isSequencer;
-    
+n    
     clientlist = malloc(sizeof(clist));
     clientlist->clientlist.clientlist_len = 0;
     alloc_clients_size = INITIAL_CLIENT_COUNT;
@@ -607,5 +618,5 @@ int main(int argc, char* argv[]){
     clientlist->clientlist.clientlist_val = list_values;
     
     llist_t* UNSEQ_CHAT_MSGS = (llist_t*) malloc(sizeof(llist_t));
-    init_list(UNSEQ_CHAT_MSGS);
+    init_list(UNSEQ_CHAT_MSGS);*/
 }

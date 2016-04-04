@@ -12,40 +12,52 @@
 #include <signal.h>
 #include <stdint.h>
 
-//#include "dchat.h"
-//#include "holdback_queue.h"
-#include "queue.h"
+//#include "queue.h"
+#include "llist.h"
 
 #define QUEUE_SIZE 128
 #define INITIAL_CLIENT_COUNT 8
 #define MSGBUFSIZE 256
 
+#define MAXSENDERLEN 64
+#define MAXUIDLEN 128
+#define MAXPACKETLEN 1024
+#define MAXPACKETBODYLEN MAXPACKETLEN-MAXSENDERLEN-MAXUIDLEN-(2*sizeof(int))-sizeof(int)-(5*sizeof(char))
+#define MESSAGEMULTIPLIER 10
+#define MAXCHATMESSAGELEN MAXPACKETBODYLEN*MESSAGEMULTIPLIER
 
+enum bool
+{
+  FALSE=0,
+  TRUE=1
+};
+typedef enum bool bool_t;
+
+/*typedef enum bool
+{
+  FALSE=0,
+  TRUE=1
+  } bool_t;*/
+//
 //Message types
-enum bool_t {TRUE=1,FALSE=0};
-enum packettype_t { CHAT = 0, SEQUENCE = 1, CHECKUP = 2, ELECTION = 3, VOTE = 4, VICTORY = 5, JOIN_REQUEST = 6, LEADER_INFO = 7, JOIN = 8};
+enum packettype { CHAT = 0, SEQUENCE = 1, CHECKUP = 2, ELECTION = 3, VOTE = 4, VICTORY = 5, JOIN_REQUEST = 6, LEADER_INFO = 7, JOIN = 8};
+typedef enum packettype packettype_t;
 //
 
 // Function Declarations
-void print(clist *); // print client list
+//void print(clist *); // print client list
 void getLocalIp(char*);
 void holdElection();
 
+/*
 int isSequencer = 0;
 int alloc_clients_size;
 
-clist *clientlist;
+clist *clientlist;p
 
 const int LOCALPORT = 2886;
 cname userdata;
-char buf[BUFLEN];
-
-const int MAXSENDERLEN = 64;
-const int MAXUIDLEN = 128;
-const int MAXPACKETLEN = 1024;
-const int MAXPACKETBODYLEN = MAXPACKETLEN-MAXSENDERLEN-MAXUIDLEN-(2*sizeof(int))-sizeof(packettype_t)-(5*sizeof(char));
-const int MESSAGEMULTIPLIER = 10;
-const int MAXCHATMESSAGELEN = MAXPACKETBODYLEN*MESSAGEMULTIPLIER;
+char buf[1024];*/
 
 static llist_t* UNSEQ_CHAT_MSGS;
 
@@ -56,7 +68,7 @@ typedef struct packet_t {
   packettype_t packettype;
   int packetnum;
   int totalpackets;
-  int packetbody[MAXPACKETBODYLEN];
+  char packetbody[MAXPACKETBODYLEN];
 } packet_t;
 
 typedef struct chatmessage_t {
@@ -69,13 +81,15 @@ typedef struct chatmessage_t {
   char messagebody[MAXCHATMESSAGELEN];
 } chatmessage_t;
 
-// rpc part start
+//bool_t returnsabool();
 
-const MAX_MSG_LEN = 512;        /* 64 Bytes */
-const MAX_USR_LEN = 32;         /* 4 Bytes  */
-const MAX_IP_LEN =  32;		    /* 4 Bytes  */
-const BUFLEN = 556;             /* WTF MATE */
+/*// rpc part start
 
+const MAX_MSG_LEN = 512;        // 64 Bytes
+//const MAX_USR_LEN = 32;         // 4 Bytes
+//const MAX_IP_LEN =  32;		    // 4 Bytes
+//const BUFLEN = 556;             // WTF MATE
+/*
 typedef string msg_send<MAX_MSG_LEN>;
 typedef string uname<MAX_USR_LEN>;
 typedef string hoststr<MAX_IP_LEN>;
@@ -118,7 +132,7 @@ char buf[BUFLEN];
 int initialized = FALSE;
 int alloc_client_size;
 int seq_num = 0;
-
+*/
 void error(char*);
 
 bool_t check_chatmessage_completeness(chatmessage_t*);
@@ -131,47 +145,47 @@ chatmessage_t* create_chatmessage(packet_t*);
 bool_t append_to_chatmessage(chatmessage_t*, packet_t*);
 
 // comparing sequence number of messages to print it acc to total ordering
-int message_compare(const void* varname, const void*);
+//int message_compare(const void* varname, const void*);
 
 // chack if input is of-> enum msg_type_t;TEXT = 0, NEWUSER = 1, USEREXIT = 2, ELECTION = 3};
-packet* parsePacket(char*);
+//packet_t* parsePacket(char*);
 
-chatmessage_t* find_chatmessage(char[])
+//chatmessage_t* find_chatmessage(char[])
 
-void receive_UDP_packet();
+//void receive_UDP_packet();
 
 // incomplete
 // discover IP address using name
-void getLocalIp(char*);
+//void getLocalIp(char*);
 
-void print_client_list(clist*);
+//void print_client_list(clist*);
 
 //incomplete
-void holdElection();
+//void holdElection();
 
 // add some way to check if client is alive
-int initialize_data_structures();
+//int initialize_data_structures();
 
-void destroy_data_structures();
+//void destroy_data_structures();
 
-void send_UDP_packet( msg_type_t, int, uname, msg_send);
+//void send_UDP_packet( msg_type_t, int, uname, msg_send);
 
-void multicast_clients(uname, hoststr, int, int);
+//void multicast_clients(uname, hoststr, int, int);
 
-void multicast_exit(uname*);
+//void multicast_exit(uname*);
 
 //add to client list
-int add(cname *);
+//int add(cname *);
 
-void send_UDP_packet(msg_recv *);
+//void send_UDP_packet(msg_recv *);
 
 // retry getting message
-msg_recv* retry(int*);
+//msg_recv* retry(int*);
 
 // exit of a client
-void exit(uname*);
+//void exit(uname*);
 
 // keep checking if sequencer is alive
-int check();
+//int check();
 
-void shutdown();
+//void shutdown();

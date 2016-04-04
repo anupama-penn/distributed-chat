@@ -20,7 +20,7 @@ void init_list(struct llist_t* list);
 struct node_t* add_elem(struct llist_t* list, void* elem);
 
 //remove elem from list
-void* remove_node(struct node_t* condemned);
+void* remove_node(struct llist_t* list, struct node_t* condemned);
 
 //frees all the contents of list
 void free_list(struct llist_t* condemned);

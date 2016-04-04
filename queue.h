@@ -1,3 +1,4 @@
+#include <stddef.h>
 
 typedef struct Q {
     int32_t num_elements;

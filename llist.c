@@ -31,7 +31,7 @@ node_t* add_elem(llist_t* list, void* elem)
   return node;
 }
 
-void* remove_node(struct node_t* condemned)
+void* remove_node(llist_t* list, struct node_t* condemned)
 {
   void* contents = condemned->elem;
   if(condemned->next)
