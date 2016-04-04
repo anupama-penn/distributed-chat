@@ -19,6 +19,7 @@
 #define INITIAL_CLIENT_COUNT 8
 #define MSGBUFSIZE 256
 
+#define MAXIPLEN 32
 #define MAXSENDERLEN 64
 #define MAXUIDLEN 128
 #define MAXPACKETLEN 1024
@@ -64,7 +65,7 @@ void holdElection();
 static char buf[1024];
 
 static llist_t* UNSEQ_CHAT_MSGS;
-
+static llist_t* CLIENTS;
 
 typedef struct packet_t {
   char sender[MAXSENDERLEN];
@@ -85,6 +86,13 @@ typedef struct chatmessage_t {
   char messagebody[MAXCHATMESSAGELEN];
 } chatmessage_t;
 
+typedef struct client_t {
+  char userName[MAXSENDERLEN];
+  char hostname[MAXIPLEN];
+  int portnum;
+  bool_t isleader; 
+} client_t;
+
 //bool_t returnsabool();
 
 /*// rpc part start
@@ -93,8 +101,8 @@ const MAX_MSG_LEN = 512;        // 64 Bytes
 //const MAX_USR_LEN = 32;         // 4 Bytes
 //const MAX_IP_LEN =  32;		    // 4 Bytes
 //const BUFLEN = 556;             // WTF MATE
-/*
-typedef string msg_send<MAX_MSG_LEN>;
+
+pptypedef string msg_send<MAX_MSG_LEN>;
 typedef string uname<MAX_USR_LEN>;
 typedef string hoststr<MAX_IP_LEN>;
 
@@ -154,9 +162,9 @@ bool_t append_to_chatmessage(chatmessage_t*, packet_t*);
 // chack if input is of-> enum msg_type_t;TEXT = 0, NEWUSER = 1, USEREXIT = 2, ELECTION = 3};
 packet_t* parsePacket(char*);
 
-//chatmessage_t* find_chatmessage(char[])
+//chatmessage_t* find_chatmessage(char uid[])
 
-//void receive_UDP_packet();
+void receive_UDP_packet();
 
 // incomplete
 // discover IP address using name

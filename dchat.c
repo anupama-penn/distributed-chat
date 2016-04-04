@@ -235,7 +235,7 @@ void receive_UDP_packet()
 
 }
 
-/*        
+
 // incomplete
 // discover IP address using name
 void getLocalIp(char *buf){
@@ -247,13 +247,15 @@ void getLocalIp(char *buf){
     
     struct sockaddr_in sockname;
     socklen_t socknamelen = sizeof(sockname);
-    err = getsockname(sock, (struct sockaddr*) &sockname, &socknamelen);
+    int err = getsockname(sock, (struct sockaddr*) &sockname, &socknamelen);
 
     const char* p = inet_ntop(AF_INET, &sockname.sin_addr, buf, INET_ADDRSTRLEN);
     close(sock);
-  
+    return;
 }
 
+/*
+//reimplement using llist_t* CLIENTS of client_t's
 void print_client_list(clist * client_list) {
     int numClients = client_list->clientlist.clientlist_len, i;
     
@@ -267,14 +269,14 @@ void print_client_list(clist * client_list) {
         }
         printf("\n");
     }
-}
+    }*/
 
 //incomplete
 void holdElection() {
     //Elect a new sequencer
 }
 
-
+/*        
 // add some way to check if client is alive
 
 int initialize_data_structures() {
