@@ -10,17 +10,17 @@
 
 #include "queue.h"
 
-void heapify(Queue *q, int32_t index);
+void heapify(Queue *q, int index);
 
-int32_t getParent(int32_t index) {
+int getParent(int index) {
   return index/2;
 }
 
-int32_t getLeftChild(int32_t index) {
+int getLeftChild(int index) {
   return 2*index + 1;
 }
 
-int32_t getRightChild(int32_t index) {
+int getRightChild(int index) {
   return 2*index + 2;
 }
 
@@ -49,7 +49,7 @@ void q_enqueue(Queue *q, const void *msg) {
 
     }
     q->messages[q->num_elements] = (void*) msg;
-    int32_t idx = q->num_elements;
+    int idx = q->num_elements;
     void *temp = NULL;
     while(idx > 0 && q->cmp(q->messages[idx], q->messages[getParent(idx)]) > 0) {
         temp = q->messages[idx];
@@ -81,14 +81,14 @@ void q_delete(Queue *q) {
     }
 }
 
-void heapify(Queue *q, int32_t index) {
+void heapify(Queue *q, int index) {
     if(q == NULL) {
       return;
     }
 
-    int32_t max_index;
-    int32_t l_child = getLeftChild(index);
-    int32_t r_child = getRightChild(index);
+    int max_index;
+    int l_child = getLeftChild(index);
+    int r_child = getRightChild(index);
 
     if (l_child < q->num_elements && q->cmp(q->messages[l_child], q->messages[index]) > 0) {
       max_index = l_child;

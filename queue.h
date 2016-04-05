@@ -1,8 +1,8 @@
 #include <stddef.h>
 
 typedef struct Q {
-    int32_t num_elements;
-    int32_t capacity;
+    int num_elements;
+    int capacity;
     void **messages;
     int (*cmp)(const void *m1, const void *m2);
 } Queue;

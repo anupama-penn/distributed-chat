@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <signal.h>
 #include <stdint.h>
+#include <time.h>
 
 //#include "queue.h"
 #include "llist.h"
@@ -62,7 +63,7 @@ void holdElection();
 
 
 //cname userdata;
-static char buf[1024];
+//static char buf[1024];
 
 static llist_t* UNSEQ_CHAT_MSGS;
 static llist_t* CLIENTS;

@@ -110,6 +110,7 @@ void receive_UDP_packet()
     int fd;
     int nbytes;
     socklen_t addrlen;
+    char buf[MAXPACKETLEN];
 
     fd = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
     if (fd < 0) {
@@ -135,7 +136,7 @@ void receive_UDP_packet()
     while (1) {
         addrlen = sizeof(addr);
         
-        nbytes = recvfrom(fd,buf,MSGBUFSIZE,0,(struct sockaddr *) &addr,&addrlen);
+        nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &addr,&addrlen);
         
         if (nbytes <0) {
             perror("recvfrom");
@@ -318,53 +319,20 @@ void destroy_data_structures() {
         }
     }
 }
+*/
 
 
 
 
-
-void send_UDP_packet( msg_type_t msgType , int sequence, uname sending_user, msg_send sending_message){
+void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
     
     struct sockaddr_in addr;
-    int fd , cnt, i;
-    
-    fd = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
-    
-    if (fd <0) {
-        fprintf(stderr,"socket create failed");
-        exit(1);
-    }
-    
-    //iterate through client list setting address,port and sendto:
-    
-    for (i=0; i<clients->clientlist.clientlist_len; i++) {
-        memset(&addr, 0, sizeof(addr));
-        
-        addr.sin_family=AF_INET;
-        addr.sin_port=htons(clients->clientlist.clientlist_val[i].lport);
-        
-        if (inet_aton(clients->clientlist.clientlist_val[i].hostname, &addr.sin_addr)==0) {
-            fprintf(stderr, "inet_aton() failed\n");
-            exit(1);
-        }
-        
-        //
-        sprintf(buf, "%d,%d,%s,%s", msgType, sequence, sending_user, sending_message);
-        
-        
-        if (sendto(fd, buf, sizeof(buf), 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-            fprintf(stderr, "sendto");
-            exit(1);
-        }
-        
-    }
-    //close(fd);
-}
+    int fd;
 
-void multicast_clients( uname userName, hoststr hostname, int lport, int leader_flag){
-    
-    struct sockaddr_in addr;
-    int fd, cnt, i;
+    int totalpacketsrequired = strlen(messagebody) / MAXPACKETBODYLEN; 
+    int remainder =  strlen(messagebody) % MAXPACKETBODYLEN; 
+    if(remainder > 0)
+      totalpacketsrequired++;
     
     fd = socket(AF_INET,SOCK_DGRAM,0);
     
@@ -373,67 +341,46 @@ void multicast_clients( uname userName, hoststr hostname, int lport, int leader_
         exit(1);
     }
     
-    for (i=0; i<clientlist.clientlist_len; i++) {
-        
+    node_t* curr = CLIENTS->head;
+    char packetbodybuf[MAXPACKETBODYLEN];
+    char packetbuf[MAXPACKETLEN];
+    
+    int timestamp = (int)time(NULL);
+    char uid[MAXUIDLEN];
+    sprintf(uid,"%d",timestamp);
+
+    while(curr != NULL)
+    {
         memset(&addr, 0, sizeof(addr));
         
         addr.sin_family=AF_INET;
-        addr.sin_port=htons(clients->clientlist.clientlist_val[i].lport);
+        addr.sin_port=htons(((client_t*)curr->elem)->portnum);
         
-        if (inet_aton(clients->clientlist.clientlist_val[i].hostname, &addr.sin_addr)==0) {
+        if (inet_aton(((client_t*)curr->elem)->hostname, &addr.sin_addr)==0) {
             fprintf(stderr, "inet_aton() failed\n");
             exit(1);
         }
         
-        sprintf(buf, "%d,%s,%s,%d,%d", NEWUSER, userName, hostname, lport, leader_flag);
+	int messageindex = 0;
+	int i;
+	for(i = 0; i < totalpacketsrequired; i++)
+	{
+	  strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
+	  messageindex += MAXPACKETBODYLEN;
+
+	  sprintf(packetbuf, "%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, messagebody);
         
-        if (sendto(fd, buf, sizeof(buf), 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+	  if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
             fprintf(stderr, "sendto");
             exit(1);
-        }
+	  }
+	}
+	curr = curr->next;
     }
     //close(fd);
 }
 
-
-void multicast_exit(uname *exitingUser) {
-    
-    struct sockaddr_in addr;
-    int fd, cnt, i;
-    
-    fd=socket(AF_INET,SOCK_DGRAM,0);
-   
-    if (fd < 0) {
-        fprintf(stderr, "SOCKET CREATION ERROR");
-        exit(1);
-    }
-    
-    // iterate through client list setting address,port and sendto:
-    
-    for (i=0; i<clients->clientlist.clientlist_len; i++) {
-        
-        memset(&addr, 0, sizeof(addr));
-        addr.sin_family=AF_INET;
-        addr.sin_port=htons(clients->clientlist.clientlist_val[i].lport);
-        
-        if (inet_aton(clients->clientlist.clientlist_val[i].hostname, &addr.sin_addr)==0) {
-            fprintf(stderr, "inet_aton() failed\n");
-            exit(1);
-        }
-        
-        // store in bug the userexit flag and exitingUser and send
-        
-        sprintf(buf, "%d,%s", USEREXIT, exitingUser);
-        
-        if (sendto(fd, buf, sizeof(buf), 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-            fprintf(stderr, "sendto");
-            exit(1);
-        }
-    }
-    //close(fd);
-}
-
-
+/*
 //add to client list
 
 int add( cname *userdata) {
@@ -478,47 +425,6 @@ int add( cname *userdata) {
     return status;
 
 }
-
-
-void send_UDP_packet(msg_recv *message) {
-    
-    int i;
-    
-    if (initialized == FALSE) {
-        initialize_data_structures();
-    }
-    
-    if (message->msg_sent == NULL || strlen(message->msg_sent) == 0 || message->msg_sent[0] == EOF) {
-        return(NULL);
-    }
-    
-    msg_buffer[seq_num % MSG_BUF_SIZE].msg_sent = (char *) malloc(sizeof(msg_send)*strlen(message->msg_sent));
-    msg_buffer[seq_num % MSG_BUF_SIZE].user_sent = (char *) malloc(sizeof(uname)*strlen(message->user_sent));
-    
-    strcpy(msg_buffer[seq_num % MSG_BUF_SIZE].msg_sent, message->msg_sent);
-    strcpy(msg_buffer[seq_num % MSG_BUF_SIZE].user_sent, message->user_sent);
-    
-    msg_buffer[seq_num % MSG_BUF_SIZE].seq_num = seq_num;
-    msg_buffer[seq_num % MSG_BUF_SIZE].msg_type = message->msg_type;]
-    
-    // assign seq_num
-    // multicast to clients and on fail/retry ->
-    //remove client from clist ,
-    //multicast exit msg , seq_num
-    
-    send_UDP_packet(
-    
-                    msg_buffer[seq_num % MSG_BUF_SIZE].msg_type,
-                    msg_buffer[seq_num % MSG_BUF_SIZE].seq_num,
-                    msg_buffer[seq_num % MSG_BUF_SIZE].user_sent,
-                    msg_buffer[seq_num % MSG_BUF_SIZE].msg_sent
-                    
-                    );
-    seq_num++ ;
-    
-    
-}
-
 
 // retry getting message
 
