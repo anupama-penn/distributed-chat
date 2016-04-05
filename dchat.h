@@ -67,6 +67,7 @@ void holdElection();
 
 static llist_t* UNSEQ_CHAT_MSGS;
 static llist_t* CLIENTS;
+static queue_t* HBACK_Q; 
 
 bool_t INITIALIZED = FALSE;
 

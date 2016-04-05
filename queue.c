@@ -10,7 +10,7 @@
 
 #include "queue.h"
 
-void heapify(Queue *q, int index);
+void heapify(queue_t *q, int index);
 
 int getParent(int index) {
   return index/2;
@@ -24,8 +24,8 @@ int getRightChild(int index) {
   return 2*index + 2;
 }
 
-Queue *init(int (*cmp)(const void *m1, const void *m2), size_t init_capacity) {
-    Queue *q = NULL;
+queue_t *init(int (*cmp)(const void *m1, const void *m2), size_t init_capacity) {
+    queue_t *q = NULL;
     q = malloc(sizeof(*q));
     if(cmp == NULL || q == NULL) {
       return NULL;
@@ -40,7 +40,7 @@ Queue *init(int (*cmp)(const void *m1, const void *m2), size_t init_capacity) {
     return q;
 }
 
-void q_enqueue(Queue *q, const void *msg) {
+void q_enqueue(queue_t *q, const void *msg) {
     if(q == NULL) {
       return;
     }
@@ -60,7 +60,7 @@ void q_enqueue(Queue *q, const void *msg) {
     q->num_elements++;
 }
 
-void *q_dequeue(Queue *q) {
+void *q_dequeue(queue_t *q) {
     if(q == NULL) {
       return NULL;
     }
@@ -74,14 +74,14 @@ void *q_dequeue(Queue *q) {
     return (item);
 }
 
-void q_delete(Queue *q) {
+void q_delete(queue_t *q) {
     if (q != NULL) {
       free(q->messages);
       free(q);
     }
 }
 
-void heapify(Queue *q, int index) {
+void heapify(queue_t *q, int index) {
     if(q == NULL) {
       return;
     }

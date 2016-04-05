@@ -232,13 +232,14 @@ void receive_UDP_packet()
 void getLocalIp(char *buf){
     
     bzero(buf,1024);
-    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    //    int sock = socket(AF_INET, SOCK_DGRAM, 0);
     
     // connect?
     
     struct sockaddr_in sockname;
     socklen_t socknamelen = sizeof(sockname);
     int err = getsockname(sock, (struct sockaddr*) &sockname, &socknamelen);
+
 
     const char* p = inet_ntop(AF_INET, &sockname.sin_addr, buf, INET_ADDRSTRLEN);
     close(sock);
