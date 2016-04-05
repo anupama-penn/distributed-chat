@@ -5,6 +5,7 @@ void init_list(llist_t* list)
 {  
   list->head = NULL;
   list->tail = NULL;
+  list->numnodes = 0;
   return;
 }
 
@@ -14,6 +15,7 @@ node_t* add_elem(llist_t* list, void* elem)
   node_t* node = (node_t*) malloc(sizeof(node_t));
 
   node->elem = elem;
+  list->numnodes++;
 
   if(!list->head)
   {
@@ -43,6 +45,7 @@ void* remove_node(llist_t* list, struct node_t* condemned)
   if(condemned == list->tail)
     list->tail = condemned->prev;
   free(condemned);
+  list->numnodes--;
   return contents;
 }
 

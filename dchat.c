@@ -1,18 +1,9 @@
 #include "dchat.h"
 
-/*enum bool
-{
-  FALSE=0,
-  TRUE=1
-};
-typedef enum bool bool_t;*/
-//
-
 void error(char *x){
   perror(x);
   exit(1);
 }
-
 
 bool_t check_chatmessage_completeness(chatmessage_t* message)
 {
@@ -25,7 +16,6 @@ bool_t check_chatmessage_completeness(chatmessage_t* message)
   }
   return TRUE;
 }
-
 
 //create a new chatmessgae given a packet
 chatmessage_t* create_chatmessage(packet_t* newpacket)
@@ -255,52 +245,48 @@ void getLocalIp(char *buf){
     return;
 }
 
-/*
+
 //reimplement using llist_t* CLIENTS of client_t's
-void print_client_list(clist * client_list) {
-    int numClients = client_list->clientlist.clientlist_len, i;
+void print_client_list() {
+  int numclients = CLIENTS->numnodes;
     
-    for (i=0; i<numClients; i++) {
-        printf("%s %s: %d",client_list->clientlist.clientlist_val[i].userName,
-               client_list->clientlist.clientlist_val[i].hostname,
-               client_list->clientlist.clientlist_val[i].lport);
-        
-        if (client_list->clientlist.clientlist_val[i].leader_flag == 1) {
-            printf(" (Leader)");
-        }
-        printf("\n");
-    }
-    }*/
+  printf("Total # of Clients:\t%d\n", numclients);
+
+  node_t* curr = CLIENTS->head;
+  while(curr != NULL)
+  {
+    printf("%s %s: %d",((client_t*)curr->elem)->username,
+	   ((client_t*)curr->elem)->hostname,
+	   ((client_t*)curr->elem)->portnum);
+
+    if(((client_t*)curr->elem)->isleader == TRUE)
+            printf(" I...am...LEADER!!!");
+    printf("\n");
+    curr = curr->next;
+  }
+}
 
 //incomplete
 void holdElection() {
     //Elect a new sequencer
 }
 
-/*        
+
 // add some way to check if client is alive
 
-int initialize_data_structures() {
+bool_t initialize_data_structures() {
     
-    clients = malloc(sizeof(clist));
-    clients->clientlist.clientlist_len = 0;
-    alloc_client_size = INITIAL_CLIENT_COUNT;
-    
-    //calloc sets memory value to 0, unlike malloc
-    
-    cname *list_values  = (cname*) calloc((size_t)INITIAL_CLIENT_COUNT ,sizeof(cnam));
-    clients -> clientlist.clientlist_val = list_values;
-    
-    msg_buffer = malloc(sizeof(msg_recv)*MSG_BUF_SIZE);
-    
-    initialized = TRUE;
-    
-    return 0;
-    
+  init_list(CLIENTS);
+  init_list(UNSEQ_CHAT_MSGS);
+
+  INITIALIZED = TRUE;
+  return INITIALIZED;
 }
 
+/*
+//TODO a long time from now or probably never
 void destroy_data_structures() {
-    
+
     if (initialized == TRUE) {
         if (clients != NULL) {
             if (clients -> clientlist.clientlist_val != NULL) {
@@ -318,8 +304,8 @@ void destroy_data_structures() {
             //no need to free seq_num and MSG type
         }
     }
-}
-*/
+    }*/
+
 
 
 
@@ -380,99 +366,10 @@ void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
     //close(fd);
 }
 
+
+
+
 /*
-//add to client list
-
-int add( cname *userdata) {
-    
-    int unameErr;
-    status_code status;
-    
-    if (initialized == FALSE) {
-        initialize_data_structures();
-    }
-    
-    if (clients == NULL) {
-        status = 1;
-    }
-   
-    // if username returns with an error, set status code to UNAMEINUSE=2:
-    //strdup = returns ptr to duplicate string
-
-    clients->clientlist.clientlist_val[clients->clientlist.clientlist_len].userName = (uname) strdup(userdata->userName);
-    
-    if (clients->clientlist.clientlist_val[clients->clientlist.clientlist_len].userName = NULL) {
-        status = 2;
-    }
-    
-    clients->clientlist.clientlist_val[clients->clientlist.clientlist_len].hostname = (hoststr) strdup(userdata->hostname);
-    clients->clientlist.clientlist_val[clients->clientlist.clientlist_len].lport = userdata->lport;
-    clients->clientlist.clientlist_val[clients->clientlist.clientlist_len].leader_flag = userdata->leader_flag;
-    
-    // Multicast the client list
-    
-    multicast_clients(
-    
-                      clients->clientlist.clientlist_val[clients->clientlist.clientlist_len].userName,
-                      clients->clientlist.clientlist_val[clients->clientlist.clientlist_len].hostname,
-                      clients->clientlist.clientlist_val[clients->clientlist.clientlist_len].lport,
-                      clients->clientlist.clientlist_val[clients->clientlist.clientlist_len].leader_flag
-    
-                      );
-    
-    clients->clientlist.clientlist_len++;
-
-    return status;
-
-}
-
-// retry getting message
-
-msg_recv *retry( int *seq_num){
-    
-    return &(msg_buffer[*seq_num %MSG_BUF_SIZE]);
-    
-}
-
-// exit of a client
-
-void exit(uname *user) {
-    
-    if (initialized == FALSE) {
-        initialize_data_structures();
-    }
-    
-    for (int i=0; i<<clients->clientlist.clientlist_len; i++) {
-        if(strcmp(user, clients->clientlist.clientlist_val[i].userName) == 0) {
-            if(i<(clients->clientlist.clientlist_len-1)) {
-                memmove(&(clients->clientlist.clientlist_val[i]), &(clients->clientlist.clientlist_val[i+1]),
-                        sizeof(cname)*clients->clientlist.clientlist_len-1-i);
-                break;
-            }
-        }
-        
-    }
-    
-    multicast_exit(user);
-
-}
-
-// keep checking if sequencer is alive
-
-int check(){
-    
-    if (initialized == FALSE) {
-        initialize_data_structures();
-    }
-    
-    int chk = 0;
-    chk++;
-    
-    
-    
-}
-
-
 void shutdown(){
     
     destroy_data_structures();
@@ -483,6 +380,10 @@ void shutdown(){
 */
 int main(int argc, char* argv[]){
     
+  CLIENTS = (llist_t*) malloc(sizeof(llist_t));
+  UNSEQ_CHAT_MSGS = (llist_t*) malloc(sizeof(llist_t));
+
+
   return 0;
   /*    pid_t pID = fork();
     if (pID == 0) {

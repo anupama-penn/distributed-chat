@@ -11,6 +11,7 @@ typedef struct llist_t //doubly-linked list implementation
 {
   struct node_t* head;
   struct node_t* tail;
+  int numnodes;
 } llist_t;
 
 //initializes empty list

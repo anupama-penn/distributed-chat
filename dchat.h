@@ -68,6 +68,8 @@ void holdElection();
 static llist_t* UNSEQ_CHAT_MSGS;
 static llist_t* CLIENTS;
 
+bool_t INITIALIZED = FALSE;
+
 typedef struct packet_t {
   char sender[MAXSENDERLEN];
   char uid[MAXUIDLEN];
@@ -88,7 +90,7 @@ typedef struct chatmessage_t {
 } chatmessage_t;
 
 typedef struct client_t {
-  char userName[MAXSENDERLEN];
+  char username[MAXSENDERLEN];
   char hostname[MAXIPLEN];
   int portnum;
   bool_t isleader; 
@@ -142,7 +144,7 @@ msg_recv *msg_buffer;
 
 char buf[BUFLEN];
 
-int initialized = FALSE;
+
 int alloc_client_size;
 int seq_num = 0;
 */
@@ -163,21 +165,21 @@ bool_t append_to_chatmessage(chatmessage_t*, packet_t*);
 // chack if input is of-> enum msg_type_t;TEXT = 0, NEWUSER = 1, USEREXIT = 2, ELECTION = 3};
 packet_t* parsePacket(char*);
 
-//chatmessage_t* find_chatmessage(char uid[])
+chatmessage_t* find_chatmessage(char uid[]);
 
 void receive_UDP_packet();
 
 // incomplete
 // discover IP address using name
-//void getLocalIp(char*);
+void getLocalIp(char*);
 
-//void print_client_list(clist*);
+void print_client_list();
 
 //incomplete
-//void holdElection();
+void holdElection();
 
 // add some way to check if client is alive
-//int initialize_data_structures();
+bool_t initialize_data_structures();
 
 //void destroy_data_structures();
 
