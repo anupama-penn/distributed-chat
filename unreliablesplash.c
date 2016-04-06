@@ -1,16 +1,38 @@
 #define _XOPEN_SOURCE_EXTENDED 1
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <ncursesw/curses.h>
 #include <locale.h>
 #include <wchar.h>
 
+typedef struct window_t
+{
+  WINDOW* window;
+  int r;
+  int c;
+  int nrows;
+  int ncols;
+  int hasfocus;
+} window_t;
 
 
-int r,c,nrows,ncols;
-WINDOW *wnd;
+int r;
+int c;
+int nrows;
+int ncols;
+WINDOW* mainwnd;
+window_t* splashwnd;
+window_t* inputwnd;
+window_t* infownd;
+window_t* msgwnd;
+
+window_t* focuswnd;
+
+window_t* focusable_wnds[3];
+int focusindex;
 
 void splash()
 {
@@ -38,74 +60,6 @@ void splash()
   printf("\n");
 }
 
-void splashcurses()
-{
-  init_pair(1, COLOR_BLUE, COLOR_BLACK);
-  init_pair(2, COLOR_CYAN, COLOR_BLACK);
-  init_pair(3, COLOR_YELLOW, COLOR_BLACK);
-  init_pair(4, COLOR_WHITE, COLOR_BLACK);
-  attron(COLOR_PAIR(1));
-  attron(A_BOLD);
-  //Unreliable
-  mvaddwstr(1,0,L"  $$$$  $$$$                                  $$$$ $$$$            $$$$       $$$$");
-  mvaddwstr(2,0,L"  $$$$  $$$$                                  $$$$ ****            $$$$       $$$$");
-  mvaddwstr(3,0,L"  $$$$  $$$$ $$$o$$$o.  $$$o$$$o.   .o$$$$o.  $$$$ $$$$  .o$$$$$o. $$$$o$$o.  $$$$  .o$$$$o.");
-  mvaddwstr(4,0,L"  $$$$  $$$$ $$$$  $$$o $$$$  $$$o .$$$  $$$o $$$$ $$$$  ***  $$$$ $$$$  $$$. $$$$ .$$$  $$$o");
-  mvaddwstr(5,0,L"  $$$$  $$$$ $$$$  $$$$ $$$$  $$$$ $$$$$$$$$$ $$$$ $$$$  o$$$$$$$$ $$$$  $$$$ $$$$ $$$$$$$$$$");
-  mvaddwstr(6,0,L"  $$$$  $$$$ $$$$  $$$$ $$$$       *$$$  oooo $$$$ $$$$ $$$$  $$$$ $$$$  $$$* $$$$ *$$$  oooo");
-  mvaddwstr(7,0,L"  '*$$$$*$$$ $$$$  $$$$ $$$$        '*$$$$$*' $$$$ $$$$  *$$$$*$$$ $$$*$$$*'  $$$$  '*$$$$$*'");
-  attroff(COLOR_PAIR(1));
-  attron(COLOR_PAIR(2));
-  //Chat
-  mvaddwstr(9,0,L"   .o$$$$o.  $$$$");
-  mvaddwstr(10,0,L"  o$$$  $$$o $$$$                  $$$$");
-  mvaddwstr(11,0,L"  $$$$  $$$$ $$$$$$$o.   .o$$$$$o. $$$$$$");
-  mvaddwstr(12,0,L"  $$$$       $$$$  $$$o  ***  $$$$ $$$$");
-  mvaddwstr(13,0,L"  $$$$  $$$$ $$$$  $$$$  o$$$$$$$$ $$$$");
-  mvaddwstr(14,0,L"  *$$$  $$$* $$$$  $$$$ $$$$  $$$$ $$$$");
-  mvaddwstr(15,0,L"   '*$$$$*'  $$$$  $$$$  *$$$$*$$$ '*$$$$");
-  attroff(COLOR_PAIR(2));
-
-  //credits
-  attron(COLOR_PAIR(4));
-  mvaddwstr(17,0,L"  $$$$$$$$$$");
-  mvaddwstr(18,0,L"  $$$$  $$$$");
-  mvaddwstr(19,0,L"  $$$$$$$$$$");
-  mvaddwstr(17,18,L" #1");
-  mvaddwstr(18,18,L" #2");
-  mvaddwstr(19,18,L" #3");
-  attroff(COLOR_PAIR(4));
-  attron(COLOR_PAIR(1));
-  mvaddwstr(19,14,L"くコB彡");
-  mvaddwstr(17,14,L"くコ8彡");
-  attroff(COLOR_PAIR(1));
-  attron(COLOR_PAIR(2));
-  mvaddwstr(18,14,L"くコ:ミ");
-  attroff(COLOR_PAIR(2));
-  attron(COLOR_PAIR(3));
-  mvaddwstr(17,22,L"Spencer Caplan");
-  mvaddwstr(18,22,L"Jordan~ Kodner");
-  mvaddwstr(19,22,L"Anupama Kumar~");
-  attroff(COLOR_PAIR(3));
-
-  //sotong tank
-  mvaddwstr(9,43,L"o$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$o");
-  mvaddwstr(10,43,L"$$                                              $$");
-  mvaddwstr(11,43,L"$$       くコBミ  くコ:彡       How so Blur?    $$");
-  mvaddwstr(12,43,L"$$  くコ8彡           くコ8ミ  くコ:彡          $$");
-  mvaddwstr(13,43,L"$$               How so Blur?          くコ8ミ  $$");
-  mvaddwstr(14,43,L"$$    くコB彡    くコBミ         くコ8彡        $$");
-  mvaddwstr(15,43,L"$$            くコ8彡  How so Blur? くコ:ミ     $$");
-  mvaddwstr(16,43,L"$$ くコ:彡           くコ8ミ      くコB彡       $$");
-  mvaddwstr(17,43,L"$$       How so Blur?     くコBミ       くコ8彡 $$");
-  mvaddwstr(18,43,L"$$                                              $$");
-  mvaddwstr(19,43,L"*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$*");
-
-
-  attroff(A_BOLD);
-}
-
-
 void splash2()
 {
   printf("\n");
@@ -131,19 +85,204 @@ void splash2()
   printf("\n");
 }
 
+
+void splashcurses()
+{
+  init_pair(1, COLOR_BLUE, COLOR_BLACK);
+  init_pair(2, COLOR_CYAN, COLOR_BLACK);
+  init_pair(3, COLOR_YELLOW, COLOR_BLACK);
+  init_pair(4, COLOR_WHITE, COLOR_BLACK);
+  wattron(splashwnd->window,COLOR_PAIR(1));
+  wattron(splashwnd->window,A_BOLD);
+  //Unreliable
+  mvwaddwstr(splashwnd->window,2,1,L"  $$$$  $$$$                                  $$$$ $$$$            $$$$       $$$$");
+  mvwaddwstr(splashwnd->window,3,1,L"  $$$$  $$$$                                  $$$$ ****            $$$$       $$$$");
+  mvwaddwstr(splashwnd->window,4,1,L"  $$$$  $$$$ $$$o$$$o.  $$$o$$$o.   .o$$$$o.  $$$$ $$$$  .o$$$$$o. $$$$o$$o.  $$$$  .o$$$$o.");
+  mvwaddwstr(splashwnd->window,5,1,L"  $$$$  $$$$ $$$$  $$$o $$$$  $$$o .$$$  $$$o $$$$ $$$$  ***  $$$$ $$$$  $$$. $$$$ .$$$  $$$o");
+  mvwaddwstr(splashwnd->window,6,1,L"  $$$$  $$$$ $$$$  $$$$ $$$$  $$$$ $$$$$$$$$$ $$$$ $$$$  o$$$$$$$$ $$$$  $$$$ $$$$ $$$$$$$$$$");
+  mvwaddwstr(splashwnd->window,7,1,L"  $$$$  $$$$ $$$$  $$$$ $$$$       *$$$  oooo $$$$ $$$$ $$$$  $$$$ $$$$  $$$* $$$$ *$$$  oooo");
+  mvwaddwstr(splashwnd->window,8,1,L"  '*$$$$*$$$ $$$$  $$$$ $$$$        '*$$$$$*' $$$$ $$$$  *$$$$*$$$ $$$*$$$*'  $$$$  '*$$$$$*'");
+  wattroff(splashwnd->window,COLOR_PAIR(1));
+  wattron(splashwnd->window,COLOR_PAIR(2));
+  //Chat
+  mvwaddwstr(splashwnd->window,10,1,L"   .o$$$$o.  $$$$");
+  mvwaddwstr(splashwnd->window,11,1,L"  o$$$  $$$o $$$$                  $$$$");
+  mvwaddwstr(splashwnd->window,12,1,L"  $$$$  $$$$ $$$$$$$o.   .o$$$$$o. $$$$$$");
+  mvwaddwstr(splashwnd->window,13,1,L"  $$$$       $$$$  $$$o  ***  $$$$ $$$$");
+  mvwaddwstr(splashwnd->window,14,1,L"  $$$$  $$$$ $$$$  $$$$  o$$$$$$$$ $$$$");
+  mvwaddwstr(splashwnd->window,15,1,L"  *$$$  $$$* $$$$  $$$$ $$$$  $$$$ $$$$");
+  mvwaddwstr(splashwnd->window,16,1,L"   '*$$$$*'  $$$$  $$$$  *$$$$*$$$ '*$$$$");
+  wattroff(splashwnd->window,COLOR_PAIR(2));
+
+  //credits
+  wattron(splashwnd->window,COLOR_PAIR(4));
+  mvwaddwstr(splashwnd->window,18,1,L"  $$$$$$$$$$");
+  mvwaddwstr(splashwnd->window,19,1,L"  $$$$  $$$$");
+  mvwaddwstr(splashwnd->window,20,1,L"  $$$$$$$$$$");
+  mvwaddwstr(splashwnd->window,18,19,L" #1");
+  mvwaddwstr(splashwnd->window,19,19,L" #2");
+  mvwaddwstr(splashwnd->window,20,19,L" #3");
+  wattroff(splashwnd->window,COLOR_PAIR(4));
+  wattron(splashwnd->window,COLOR_PAIR(1));
+  mvwaddwstr(splashwnd->window,20,15,L"くコB彡");
+  mvwaddwstr(splashwnd->window,18,15,L"くコ8彡");
+  wattroff(splashwnd->window,COLOR_PAIR(1));
+  wattron(splashwnd->window,COLOR_PAIR(2));
+  mvwaddwstr(splashwnd->window,19,15,L"くコ:ミ");
+  wattroff(splashwnd->window,COLOR_PAIR(2));
+  wattron(splashwnd->window,COLOR_PAIR(3));
+  mvwaddwstr(splashwnd->window,18,23,L"Spencer Caplan");
+  mvwaddwstr(splashwnd->window,19,23,L"Jordan~ Kodner");
+  mvwaddwstr(splashwnd->window,20,23,L"Anupama Kumar~");
+  wattroff(splashwnd->window,COLOR_PAIR(3));
+
+  //sotong tank
+  mvwaddwstr(splashwnd->window,10,44,L"o$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$o");
+  mvwaddwstr(splashwnd->window,11,44,L"$$                                              $$");
+  mvwaddwstr(splashwnd->window,12,44,L"$$       くコBミ  くコ:彡       How so Blur?    $$");
+  mvwaddwstr(splashwnd->window,13,44,L"$$  くコ8彡           くコ8ミ  くコ:彡          $$");
+  mvwaddwstr(splashwnd->window,14,44,L"$$               How so Blur?          くコ8ミ  $$");
+  mvwaddwstr(splashwnd->window,15,44,L"$$    くコB彡    くコBミ         くコ8彡        $$");
+  mvwaddwstr(splashwnd->window,16,44,L"$$            くコ8彡  How so Blur? くコ:ミ     $$");
+  mvwaddwstr(splashwnd->window,17,44,L"$$ くコ:彡           くコ8ミ      くコB彡       $$");
+  mvwaddwstr(splashwnd->window,18,44,L"$$       How so Blur?     くコBミ       くコ8彡 $$");
+  mvwaddwstr(splashwnd->window,19,44,L"$$                                              $$");
+  mvwaddwstr(splashwnd->window,20,44,L"*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$*");
+
+
+  wattroff(splashwnd->window,A_BOLD);
+  wrefresh(splashwnd->window);
+}
+
+
+
 void draw(char dc)
 {
-  move(r,c);
-  delch();
-  insch(dc);
-  r++;
-  if(r == nrows)
+  wmove(focuswnd->window,r,c);
+  wdelch(focuswnd->window);
+  winsch(focuswnd->window,dc);
+  c++;
+  if(c == focuswnd->ncols)
   {
-    r = 0;
-    c++;
-    if (c== ncols)
-      c = 0;
+    c = 2;
+    r++;
+    if (r== focuswnd->nrows)
+      r = 2;
   }
+  wmove(focuswnd->window,r,c);
+}
+
+void setborder(window_t* wnd)
+{
+  int color = 10;
+  if(wnd->hasfocus == 1)
+  {
+    color = 11;
+  }
+  wattron(wnd->window,COLOR_PAIR(color));
+  wborder(wnd->window, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
+  wattroff(wnd->window,COLOR_PAIR(color));
+}
+
+window_t* init_wnd(int h, int w, int startr, int startc)
+{
+  window_t* newwnd = (window_t*)malloc(sizeof(window_t));;
+  WINDOW* newwindow;
+
+  newwindow = newwin(h,w,startr,startc);
+  newwnd->window = newwindow;
+  newwnd->r = 0;
+  newwnd->c = 0;
+  newwnd->ncols = w;
+  newwnd->nrows = h;
+  newwnd->hasfocus = 0;
+  setborder(newwnd);
+  wrefresh(newwnd->window);
+  return newwnd;
+}
+
+void del_wnd(window_t* wnd)
+{
+  delwin(wnd->window);
+}
+
+void setfocus(window_t* newfocuswnd)
+{
+  focuswnd->hasfocus = 0;
+  setborder(focuswnd);
+  newfocuswnd->hasfocus = 1;
+  setborder(newfocuswnd);
+  focuswnd = newfocuswnd;
+}
+
+void nextfocus()
+{
+  focusindex++;
+  if(focusindex > 2)
+    focusindex = 0;
+  setfocus(focusable_wnds[focusindex]);
+}
+
+void initui(int isdebug)
+{
+  char d;
+
+  if(isdebug)
+    return;
+
+  //  splash();
+  mainwnd = initscr();
+  setlocale(LC_ALL, "en_US.utf8");
+  start_color();
+  init_pair(10, COLOR_BLACK, COLOR_WHITE);
+  init_pair(11, COLOR_BLACK, COLOR_CYAN);
+
+
+  cbreak();
+  noecho();
+  getmaxyx(mainwnd,nrows,ncols);
+  //  init_pair(10, COLOR_BLACK, COLOR_WHITE);
+  //  wattron(mainwnd,COLOR_PAIR(10));
+  //  wborder(mainwnd, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
+  //  wattroff(mainwnd,COLOR_PAIR(10));
+  //  wrefresh(mainwnd);
+  //  wprintw(mainwnd,"%d, %d\n",nrows,ncols);
+  //  if(has_colors() == FALSE)
+  //    {endwin();
+  //      printf("Your terminal does not support color. Run in non-UI mode instead.\n");
+  //      exit(1);
+  //    }
+  clear();
+  //  wprintw(mainwnd,"%d, %d\n",nrows,ncols);
+  wrefresh(mainwnd);
+
+  splashwnd = init_wnd(23, 97, 0, 1);
+  infownd = init_wnd(26, 97, 22, 1);
+  inputwnd = init_wnd(11, 97, 47, 1);
+  msgwnd = init_wnd(nrows, ncols-99, 0, 98);
+  
+  focusable_wnds[0] = infownd;
+  focusable_wnds[1] = inputwnd;
+  focusable_wnds[2] = msgwnd;
+  focusindex = 0;
+  focuswnd = focusable_wnds[0];
+  nextfocus();
+  //  setfocus(inputwnd);
+  
+
+  splashcurses();
+
+  r = 2;
+  c = 2;
+  while(1)
+  {
+    d = wgetch(focuswnd->window);
+    if(d == '\t')
+      nextfocus();
+    else
+      draw(d);
+    }
+  
 }
 
 int main(int argc, char** argv)
@@ -151,34 +290,13 @@ int main(int argc, char** argv)
   int i = 0;
 
   char d;
-  WINDOW *wnd;
-  
-  //  splash();
-  wnd = initscr();
-  setlocale(LC_ALL, "en_US.utf8");
-  //  if(has_colors() == FALSE)
-  //    {endwin();
-  //      printf("Your terminal does not support color. Run in non-UI mode instead.\n");
-  //      exit(1);
-  //    }
-  start_color();
-  cbreak();
-  noecho();
-  getmaxyx(wnd,nrows,ncols);
-  //  clear();
-  refresh();
-  splashcurses();
-  wrefresh(wnd);
-  r = 0;
-  c = 0;
-  while(1)
-  {
-    d = getch();
-    if(d == 'q') break;
-    draw(d);
-  }
 
+    initui(0);
 
+  //  del_wnd(splashwnd);
+  //  del_wnd(infownd);
+  //  del_wnd(inputwnd);
+  //  del_wnd(msgwnd);
   endwin();
 
   printf("\E[H\E[2J");
