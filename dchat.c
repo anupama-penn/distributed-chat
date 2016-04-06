@@ -164,6 +164,7 @@ void receive_UDP_packet()
 	  break;
 	case SEQUENCE:
 	  //This is a sequencing message. Find the corresponding chat message in the unsequenced message list and enqueue it properly
+	  //If the corresponding message is not complete, ask the leader for its missing part first. It will be received as a chat. 
 	  break;
 	case CHECKUP:
 	  break;
@@ -232,7 +233,7 @@ void receive_UDP_packet()
 void getLocalIp(char *buf){
     
     bzero(buf,1024);
-    //    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
     
     // connect?
     
@@ -307,7 +308,16 @@ void destroy_data_structures() {
     }
     }*/
 
-
+client_t* add_client(char username[], char hostname[], int portnum, bool_t isleader)
+{
+  client_t* newclient = (client_t*)malloc(sizeof(client_t));
+  strcpy(newclient->username,username);
+  strcpy(newclient->hostname,hostname);
+  newclient->portnum = portnum;
+  newclient->isleader = isleader;
+  add_elem(CLIENTS,(void*)newclient);
+  return newclient;
+}
 
 
 
@@ -383,8 +393,17 @@ int main(int argc, char* argv[]){
     
   CLIENTS = (llist_t*) malloc(sizeof(llist_t));
   UNSEQ_CHAT_MSGS = (llist_t*) malloc(sizeof(llist_t));
+  initialize_data_structures();
 
+  printf("I'm awake.\n");
 
+  //add the other fake guy
+  if(strcmp(argv[1],"5000"))
+  {
+
+  }
+
+  multicast_UDP(CHAT, "name", "hello");
   return 0;
   /*    pid_t pID = fork();
     if (pID == 0) {

@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include <time.h>
 
-//#include "queue.h"
+#include "queue.h"
 #include "llist.h"
 
 #define QUEUE_SIZE 128
@@ -205,3 +205,5 @@ bool_t initialize_data_structures();
 //int check();
 
 //void shutdown();
+
+client_t* add_client(char username[], char hostname[], int portnum, bool_t isleader);
