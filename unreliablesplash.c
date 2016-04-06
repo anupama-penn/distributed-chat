@@ -456,7 +456,7 @@ void initui(int isdebug)
   wrefresh(mainwnd);
 
   splashwnd = init_wnd(23, 97, 0, 1);
-  infownd = init_wnd(nrows-33, 97, 22, 1);
+  infownd = init_wnd(nrows-32, 97, 22, 1);
   inputwnd = init_wnd(11, 97, nrows-11, 1);
   msgwnd = init_wnd(nrows, ncols-99, 0, 98);
   
