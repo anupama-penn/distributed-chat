@@ -3,10 +3,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <ncursesw/curses.h>
 #include <locale.h>
 #include <wchar.h>
+
+#include "llist.h"
+
+typedef struct uimessage_t
+{
+  char* username;
+  int userid;
+  char** message;
+  int numlines;
+} uimessage_t;
 
 typedef struct window_t
 {
@@ -18,6 +29,11 @@ typedef struct window_t
   int hasfocus;
 } window_t;
 
+llist_t* MSGS;
+llist_t* INFOS;
+
+char MY_MSG[1024];
+int MY_MSG_INDEX;
 
 int r;
 int c;
@@ -156,33 +172,133 @@ void splashcurses()
 
 
 
+void add_msg(char* user, char message[])
+{
+  int maxline = msgwnd->ncols-40;
+  int numlines = strlen(message)/maxline;
+  if(strlen(message)%maxline > 0)
+    numlines++;
+  char** msglines = (char**)malloc(sizeof(char)*numlines*maxline);
+  int lo = 0;
+  int hi = 0+maxline;
+  int index = 0;
+  wprintw(msgwnd->window,"\n     %d,%d,%d\n", index,strlen(message),maxline);
+  
+  while(lo+maxline < strlen(message))
+  {
+    msglines[index] = (char*)malloc(sizeof(char)*maxline);
+    strncpy(msglines[index],&message[lo],lo+maxline);
+  wprintw(msgwnd->window,"\n  inner   %d\n", index);
+    lo = lo+maxline;
+    index++;
+  }
+  msglines[index] = (char*)malloc(sizeof(char)*maxline);
+  strncpy(msglines[index],&message[lo],strlen(&message[lo]));
+  uimessage_t* newmessage = (uimessage_t*)malloc(sizeof(uimessage_t));
+  newmessage->username = user;
+  newmessage->userid = 1;
+  newmessage->message = msglines;
+  newmessage->numlines = numlines;
+  add_elem(MSGS, (void*)newmessage);
+
+  int i = 0;
+  for(i = numlines-1; i >= 0; i--)
+  {
+    //    mvwaddstr(msgwnd->window,msgwnd->nrows-2-i, 38, "hello");
+    mvwaddstr(msgwnd->window,msgwnd->nrows-2+i-numlines, 38, msglines[i]);
+  }
+  wrefresh(msgwnd->window);
+}
+
+void print_msgs()
+{
+  int linenum = msgwnd->ncols+2;
+
+  node_t* curr = MSGS->tail;
+  while(curr != NULL)
+  {
+    uimessage_t* uimsg = (uimessage_t*)(curr->elem);
+    int i = 0;
+    for(i = uimsg->numlines-1; i >= 0; i--)
+    {
+      //    mvwaddstr(msgwnd->window,msgwnd->nrows-2-i, 38, "hello");
+      mvwaddstr(msgwnd->window,linenum, 38, uimsg->message[i]);
+      linenum--;
+      if(linenum == 0)
+	break;
+    }
+
+    curr=curr->prev;
+  }
+    wrefresh(msgwnd->window);
+}
+
+void print_msg(char* user, char message[])
+{
+  add_msg(user,message);
+  print_msgs();
+}
+
+
 void draw(char dc)
 {
-  wmove(focuswnd->window,r,c);
+  wmove(focuswnd->window,focuswnd->r,focuswnd->c);
+  if(dc == '\n')
+  {
+    //    wprintw(msgwnd->window,"\n\n   ");
+    //    wprintw(msgwnd->window,MY_MSG);
+    //    wrefresh(msgwnd->window);
+    print_msg("Me", MY_MSG);
+    refresh_wnd(focuswnd);
+    memset(MY_MSG,0, 1024);
+    MY_MSG_INDEX = 0;
+    return;
+  }
   wdelch(focuswnd->window);
   winsch(focuswnd->window,dc);
-  c++;
-  if(c == focuswnd->ncols)
+
+  MY_MSG[MY_MSG_INDEX] = dc;
+  MY_MSG_INDEX++;
+  //  wprintw(msgwnd->window,"\n\n   ");
+  //  wprintw(msgwnd->window,MY_MSG);
+  //  wrefresh(msgwnd->window);
+
+  focuswnd->c++;
+  if(focuswnd->c == focuswnd->ncols)
   {
-    c = 2;
-    r++;
-    if (r== focuswnd->nrows)
-      r = 2;
+    focuswnd->c = 2;
+    focuswnd->r++;
+    if (focuswnd->r== focuswnd->nrows)
+      focuswnd->r = 2;
   }
-  wmove(focuswnd->window,r,c);
+  wmove(focuswnd->window,focuswnd->r,focuswnd->c);
 }
+
+
 
 void setborder(window_t* wnd)
 {
   int color = 10;
   if(wnd->hasfocus == 1)
-  {
     color = 11;
-  }
+  //  if(wnd)
+  //  draw(wnd->hasfocus+48);
   wattron(wnd->window,COLOR_PAIR(color));
   wborder(wnd->window, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
   wattroff(wnd->window,COLOR_PAIR(color));
+  wrefresh(wnd->window);
 }
+
+void refresh_wnd(window_t* wnd)
+{
+  wclear(wnd->window);
+  wnd->c = 2;
+  wnd->r = 2;
+  setborder(wnd);
+  wmove(focuswnd->window,focuswnd->r,focuswnd->c);
+  wrefresh(wnd->window);
+}
+
 
 window_t* init_wnd(int h, int w, int startr, int startc)
 {
@@ -191,8 +307,8 @@ window_t* init_wnd(int h, int w, int startr, int startc)
 
   newwindow = newwin(h,w,startr,startc);
   newwnd->window = newwindow;
-  newwnd->r = 0;
-  newwnd->c = 0;
+  newwnd->r = 2;
+  newwnd->c = 2;
   newwnd->ncols = w;
   newwnd->nrows = h;
   newwnd->hasfocus = 0;
@@ -209,8 +325,8 @@ void del_wnd(window_t* wnd)
 void setfocus(window_t* newfocuswnd)
 {
   focuswnd->hasfocus = 0;
-  setborder(focuswnd);
   newfocuswnd->hasfocus = 1;
+  setborder(focuswnd);
   setborder(newfocuswnd);
   focuswnd = newfocuswnd;
 }
@@ -230,13 +346,18 @@ void initui(int isdebug)
   if(isdebug)
     return;
 
+  //  MY_MSG = (char*)malloc(sizeof(char));
+  MY_MSG_INDEX = 0;
+  MSGS = (llist_t*)malloc(sizeof(llist_t));
+  init_list(MSGS);
+
   //  splash();
   mainwnd = initscr();
   setlocale(LC_ALL, "en_US.utf8");
   start_color();
-  init_pair(10, COLOR_BLACK, COLOR_WHITE);
-  init_pair(11, COLOR_BLACK, COLOR_CYAN);
 
+  init_pair(11, COLOR_BLACK, COLOR_CYAN);
+  init_pair(10, COLOR_BLACK, COLOR_WHITE);
 
   cbreak();
   noecho();
@@ -264,21 +385,20 @@ void initui(int isdebug)
   focusable_wnds[0] = infownd;
   focusable_wnds[1] = inputwnd;
   focusable_wnds[2] = msgwnd;
-  focusindex = 0;
-  focuswnd = focusable_wnds[0];
-  nextfocus();
-  //  setfocus(inputwnd);
-  
+  focusindex = 1;
+  focuswnd = focusable_wnds[1];
+  setfocus(inputwnd);
 
   splashcurses();
 
-  r = 2;
-  c = 2;
+
   while(1)
   {
     d = wgetch(focuswnd->window);
     if(d == '\t')
-      nextfocus();
+   {
+     nextfocus();
+   }
     else
       draw(d);
     }
