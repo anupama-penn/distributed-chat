@@ -1,5 +1,8 @@
 #define _XOPEN_SOURCE_EXTENDED 1
 
+//gcc unreliablesplash.c llist.c -lncursesw && a.out
+
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -10,6 +13,8 @@
 #include <wchar.h>
 
 #include "llist.h"
+
+#define SYSCALL_THREADNUM 0
 
 typedef struct uimessage_t
 {
@@ -174,7 +179,7 @@ void splashcurses()
 
 void add_msg(char* user, char message[])
 {
-  int maxline = msgwnd->ncols-40;
+  int maxline = msgwnd->ncols/2-2;
   int numlines = strlen(message)/maxline;
   if(strlen(message)%maxline > 0)
     numlines++;
@@ -182,14 +187,13 @@ void add_msg(char* user, char message[])
   int lo = 0;
   int hi = 0+maxline;
   int index = 0;
-  wprintw(msgwnd->window,"\n     %d,%d,%d\n", index,strlen(message),maxline);
-  
+
   while(lo+maxline < strlen(message))
   {
-    msglines[index] = (char*)malloc(sizeof(char)*maxline);
+    msglines[index] = (char*)malloc(sizeof(char)*maxline+1);
     strncpy(msglines[index],&message[lo],lo+maxline);
-  wprintw(msgwnd->window,"\n  inner   %d\n", index);
-    lo = lo+maxline;
+    msglines[index][maxline] = '\0';
+    lo += maxline;
     index++;
   }
   msglines[index] = (char*)malloc(sizeof(char)*maxline);
@@ -212,21 +216,45 @@ void add_msg(char* user, char message[])
 
 void print_msgs()
 {
-  int linenum = msgwnd->ncols+2;
+  int linenum = msgwnd->nrows-2;
 
   node_t* curr = MSGS->tail;
+  wclear(msgwnd->window);
+  setborder(msgwnd);
   while(curr != NULL)
   {
     uimessage_t* uimsg = (uimessage_t*)(curr->elem);
+    int start = 10;
+    int namestart = 2;
+    if(strcmp("Me", uimsg->username) == 0)
+    {
+      start = msgwnd->ncols/2;
+      namestart = msgwnd->ncols-2-strlen(uimsg->username);
+    }
     int i = 0;
     for(i = uimsg->numlines-1; i >= 0; i--)
     {
       //    mvwaddstr(msgwnd->window,msgwnd->nrows-2-i, 38, "hello");
-      mvwaddstr(msgwnd->window,linenum, 38, uimsg->message[i]);
+      mvwaddstr(msgwnd->window,linenum, start, uimsg->message[i]);
       linenum--;
       if(linenum == 0)
 	break;
     }
+    wattron(msgwnd->window,COLOR_PAIR(1));    
+    if(curr->prev != NULL)
+    {
+      if(strcmp(((uimessage_t*)curr->prev->elem)->username, uimsg->username))
+	{
+	mvwaddstr(msgwnd->window,linenum, namestart, uimsg->username);
+	linenum--;
+	}
+    }
+    else
+    {
+      mvwaddstr(msgwnd->window,linenum, namestart, uimsg->username);
+      linenum--;
+    }
+    wattroff(msgwnd->window,COLOR_PAIR(1));    
 
     curr=curr->prev;
   }
@@ -237,6 +265,19 @@ void print_msg(char* user, char message[])
 {
   add_msg(user,message);
   print_msgs();
+}
+
+void *spoof_chats(void *t)
+{
+  while(1)
+  {
+    print_msg("Alice", "Hi, how are you doing? I'm fine personally, but I'm just a function parameter, so I don't really know what I'm talking about. You know what I mean?");
+    sleep(5);
+    print_msg("Bob","Am Bob.");
+    print_msg("Bob","Boon? Me ah?.");
+    sleep(2);
+  }
+  pthread_exit((void *)t);
 }
 
 
@@ -254,6 +295,32 @@ void draw(char dc)
     MY_MSG_INDEX = 0;
     return;
   }
+  if(dc == '\b')
+  {
+    waddch(focuswnd->window,' ');
+
+    if(focuswnd->c < 3)
+    {
+
+      if(focuswnd->r > 2)
+      {
+	focuswnd->r--;
+	focuswnd->c = focuswnd->ncols-3;
+      }
+    }
+    else
+      focuswnd->c--;
+    wmove(focuswnd->window, focuswnd->r, focuswnd->c);
+    if(MY_MSG_INDEX > 0)
+      MY_MSG_INDEX--;
+    MY_MSG[MY_MSG_INDEX] = '\0';
+
+    return;
+  }
+
+  if(focuswnd->c == focuswnd->ncols-2 && focuswnd->r == focuswnd->nrows-2)
+    return;
+
   wdelch(focuswnd->window);
   winsch(focuswnd->window,dc);
 
@@ -264,11 +331,11 @@ void draw(char dc)
   //  wrefresh(msgwnd->window);
 
   focuswnd->c++;
-  if(focuswnd->c == focuswnd->ncols)
+  if(focuswnd->c == focuswnd->ncols-2)
   {
     focuswnd->c = 2;
     focuswnd->r++;
-    if (focuswnd->r== focuswnd->nrows)
+    if (focuswnd->r== focuswnd->nrows-2)
       focuswnd->r = 2;
   }
   wmove(focuswnd->window,focuswnd->r,focuswnd->c);
@@ -280,7 +347,14 @@ void setborder(window_t* wnd)
 {
   int color = 10;
   if(wnd->hasfocus == 1)
-    color = 11;
+  {
+    if(wnd == msgwnd)
+      color = 11;
+    else if(wnd == inputwnd)
+      color = 12;
+    else
+      color = 13;
+  }
   //  if(wnd)
   //  draw(wnd->hasfocus+48);
   wattron(wnd->window,COLOR_PAIR(color));
@@ -357,6 +431,8 @@ void initui(int isdebug)
   start_color();
 
   init_pair(11, COLOR_BLACK, COLOR_CYAN);
+  init_pair(12, COLOR_BLACK, COLOR_YELLOW);
+  init_pair(13, COLOR_BLACK, COLOR_BLUE);
   init_pair(10, COLOR_BLACK, COLOR_WHITE);
 
   cbreak();
@@ -391,6 +467,18 @@ void initui(int isdebug)
 
   splashcurses();
 
+  pthread_t threads[2];
+  pthread_attr_t attr;
+  void *exitstatus;
+
+  //make sure threads are joinable
+  pthread_attr_init(&attr);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+  pthread_create(&threads[SYSCALL_THREADNUM], &attr, spoof_chats, (void *)SYSCALL_THREADNUM);
+
+  //  pthread_join(threads[SYSCALL_THREADNUM], &exitstatus);
+
 
   while(1)
   {
@@ -411,7 +499,7 @@ int main(int argc, char** argv)
 
   char d;
 
-    initui(0);
+  initui(0);
 
   //  del_wnd(splashwnd);
   //  del_wnd(infownd);
