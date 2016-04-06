@@ -354,6 +354,7 @@ void setborder(window_t* wnd)
       color = 12;
     else
       color = 13;
+    wattron(wnd->window,A_BOLD);
   }
   //  if(wnd)
   //  draw(wnd->hasfocus+48);
@@ -361,6 +362,7 @@ void setborder(window_t* wnd)
   wborder(wnd->window, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
   wattroff(wnd->window,COLOR_PAIR(color));
   wrefresh(wnd->window);
+  wattroff(wnd->window,A_BOLD);
 }
 
 void refresh_wnd(window_t* wnd)
@@ -454,8 +456,8 @@ void initui(int isdebug)
   wrefresh(mainwnd);
 
   splashwnd = init_wnd(23, 97, 0, 1);
-  infownd = init_wnd(26, 97, 22, 1);
-  inputwnd = init_wnd(11, 97, 47, 1);
+  infownd = init_wnd(nrows-33, 97, 22, 1);
+  inputwnd = init_wnd(11, 97, nrows-11, 1);
   msgwnd = init_wnd(nrows, ncols-99, 0, 98);
   
   focusable_wnds[0] = infownd;
