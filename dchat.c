@@ -358,15 +358,8 @@ void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
         addr.sin_family=AF_INET;
         addr.sin_port=htons(((client_t*)curr->elem)->portnum);
         
-	//TODO uncomment this
-	//        if (inet_aton(((client_t*)curr->elem)->hostname, &addr.sin_addr)==0) {
-	//            fprintf(stderr, "inet_aton() failed\n");
-	//            exit(1);
-	//        }
-	addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //TODO get rid of this
-	if((connect(fd, (struct sockaddr*)&addr, sizeof(addr))) < 0) //TODO and this
-	{
-	  perror("simplex-talk: connect");
+	if (inet_aton(((client_t*)curr->elem)->hostname, &addr.sin_addr)==0) {
+	  fprintf(stderr, "inet_aton() failed\n");
 	  exit(1);
 	}
 
