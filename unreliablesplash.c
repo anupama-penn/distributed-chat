@@ -22,6 +22,7 @@ typedef struct uimessage_t
   int userid;
   char* message;
   int numlines;
+  int maxwidth;
 } uimessage_t;
 
 typedef struct window_t
@@ -34,6 +35,12 @@ typedef struct window_t
   int hasfocus;
 } window_t;
 
+typedef struct user_t
+{
+  int usernum;
+  char* username;
+} user_t;
+
 pthread_mutex_t disp_mutex;
 
 llist_t* MSGS;
@@ -41,6 +48,8 @@ llist_t* INFOS;
 
 char MY_MSG[1024];
 int MY_MSG_INDEX;
+
+int useruid = 0;
 
 int r;
 int c;
@@ -292,12 +301,13 @@ void add_msg(char* user, char message[])
   int lo = 0;
   int hi = 0+maxline;
   int index = 0;
-
+  int maxwidth = 0;
   if(strlen(message) > maxline)
   {
     strncpy(msglines,&message[lo],maxline);
     lo += maxline;
     strcat(msglines,"\n");
+    maxwidth = maxline;
     while(lo+maxline < strlen(message))
     {
       strncat(msglines,&message[lo],maxline);
@@ -312,6 +322,7 @@ void add_msg(char* user, char message[])
   {
     strcpy(msglines,&message[lo]);
     strcat(msglines,"\n");
+    maxwidth = strlen(message);
   }
 
   if(MSGS->tail != NULL && strcmp(((uimessage_t*)MSGS->tail->elem)->username,user) == 0)
@@ -324,6 +335,8 @@ void add_msg(char* user, char message[])
     prevmsg = NULL;
     ((uimessage_t*)MSGS->tail->elem)->message = combinedmsg;
     ((uimessage_t*)MSGS->tail->elem)->numlines += numlines;
+    if(maxwidth > ((uimessage_t*)MSGS->tail->elem)->maxwidth)
+      ((uimessage_t*)MSGS->tail->elem)->maxwidth = maxwidth;
   }
   else
   {
@@ -332,6 +345,7 @@ void add_msg(char* user, char message[])
     newmessage->userid = 1;
     newmessage->message = msglines;
     newmessage->numlines = numlines;
+    newmessage->maxwidth = maxwidth;
     add_elem(MSGS, (void*)newmessage);
   }
 
@@ -339,7 +353,7 @@ void add_msg(char* user, char message[])
 
 void print_msgs()
 {
-  int linenum = msgwnd->nrows-2;
+  int linenum = msgwnd->nrows-4;
 
   node_t* curr = MSGS->tail;
   pthread_mutex_lock(&disp_mutex);
@@ -350,11 +364,22 @@ void print_msgs()
   {
     uimessage_t* uimsg = (uimessage_t*)(curr->elem);
     int start = 10;
-    int namestart = 2;
+    int namestart = start-6;
+    int color = 1;
+    //    int namestart = 4;
     if(strcmp("Me", uimsg->username) == 0)
     {
-      start = msgwnd->ncols/2;
-      namestart = msgwnd->ncols-2-strlen(uimsg->username);
+      //      if(curr == MSGS->tail)
+      //      {
+      //	wprintw(infownd->window,"%d\n",uimsg->maxwidth);
+      //	wrefresh(infownd->window);
+      //      }
+      color = 3;
+      start = msgwnd->ncols-4-uimsg->maxwidth;
+      //      start = msgwnd->ncols/2;
+      namestart = start-6;
+      //      namestart = msgwnd->ncols/2 + namestart;
+      //      namestart = msgwnd->ncols-2-strlen(uimsg->username);
     }
 
     pthread_mutex_lock(&disp_mutex);
@@ -363,9 +388,9 @@ void print_msgs()
     linenum-=uimsg->numlines;
     msgwnd->r = linenum;
     msgwnd->c = start;
-
+    //    linenum += 1;
     currchar = uimsg->message[i];
-    while(currchar != NULL)
+    while(currchar != '\0')
     {     
       if(currchar == '\n')
       {
@@ -396,24 +421,45 @@ void print_msgs()
 	}*/
     pthread_mutex_unlock(&disp_mutex);
     linenum--;
-    if(linenum < 1)
-      break;
     pthread_mutex_lock(&disp_mutex);
-    wattron(msgwnd->window,COLOR_PAIR(1));    
-    if(curr->prev != NULL)
+    wattron(msgwnd->window,COLOR_PAIR(color));    
+    int j = 0;
+    for(j = namestart-2; j < uimsg->maxwidth+start+2; j++)
+    {
+      if(linenum-2 > 0)
+      	mvwaddch(msgwnd->window,linenum-1,j,'*');
+      if(linenum+uimsg->numlines+1 > 0)
+	mvwaddch(msgwnd->window,linenum+uimsg->numlines+2,j,'*');
+    }
+    for(j = linenum-1; j < linenum+uimsg->numlines+2; j++)
+    {
+      if(linenum-1+j > 0)
+      {
+      	mvwaddch(msgwnd->window,j,namestart-2,'*');
+      	mvwaddch(msgwnd->window,j,uimsg->maxwidth+start+1,'*');
+      }
+    }
+    //    if(linenum < 1)
+    //      break;
+    wattron(msgwnd->window,A_BOLD);
+    if(linenum > 0)
+      mvwaddstr(msgwnd->window,linenum, namestart, uimsg->username);
+    wattroff(msgwnd->window,A_BOLD);
+    linenum-=3;
+    /*    if(curr->prev != NULL)
     {
       if(strcmp(((uimessage_t*)curr->prev->elem)->username, uimsg->username))
 	{
 	mvwaddstr(msgwnd->window,linenum, namestart, uimsg->username);
-	linenum--;
+	linenum-=3;
 	}
     }
     else
     {
       mvwaddstr(msgwnd->window,linenum, namestart, uimsg->username);
-      linenum--;
-    }
-    wattroff(msgwnd->window,COLOR_PAIR(1));    
+      linenum-=3;
+      }*/
+    wattroff(msgwnd->window,COLOR_PAIR(color));    
     pthread_mutex_unlock(&disp_mutex);
     curr=curr->prev;
   }
