@@ -156,13 +156,6 @@ void *splashcurses(void *t)
   mvwaddwstr(splashwnd->window,19,22,L" #2");
   mvwaddwstr(splashwnd->window,20,22,L" #3");
   wattroff(splashwnd->window,COLOR_PAIR(4));
-  wattron(splashwnd->window,COLOR_PAIR(1));
-  mvwaddwstr(splashwnd->window,20,15,L"くコB彡");
-  mvwaddwstr(splashwnd->window,18,15,L"くコ8彡");
-  wattroff(splashwnd->window,COLOR_PAIR(1));
-  wattron(splashwnd->window,COLOR_PAIR(2));
-  mvwaddwstr(splashwnd->window,19,15,L"くコ:ミ");
-  wattroff(splashwnd->window,COLOR_PAIR(2));
   wattron(splashwnd->window,COLOR_PAIR(3));
   mvwaddwstr(splashwnd->window,18,27,L"Spencer Caplan");
   mvwaddwstr(splashwnd->window,19,27,L"Jordan~ Kodner");
@@ -226,6 +219,13 @@ void *splashcurses(void *t)
     mvwaddwstr(splashwnd->window,17,67,L"くコ8彡");
     mvwaddwstr(splashwnd->window,18,81,L"くコ8ミ");
     wattroff(splashwnd->window,COLOR_PAIR(1));
+    wattron(splashwnd->window,COLOR_PAIR(1));
+    mvwaddwstr(splashwnd->window,20,15,L"くコB彡");
+    mvwaddwstr(splashwnd->window,18,15,L"くコ8彡");
+    wattroff(splashwnd->window,COLOR_PAIR(1));
+    wattron(splashwnd->window,COLOR_PAIR(2));
+    mvwaddwstr(splashwnd->window,19,15,L"くコ:ミ");
+    wattroff(splashwnd->window,COLOR_PAIR(2));
 
   //How so Blur?
     wattron(splashwnd->window,COLOR_PAIR(3));
@@ -269,6 +269,13 @@ void *splashcurses(void *t)
     mvwaddwstr(splashwnd->window,17,65,L"くコ8ミ");
     mvwaddwstr(splashwnd->window,18,83,L"くコ8彡");
     wattroff(splashwnd->window,COLOR_PAIR(1));
+    wattron(splashwnd->window,COLOR_PAIR(1));
+    mvwaddwstr(splashwnd->window,20,15,L"くコBミ");
+    mvwaddwstr(splashwnd->window,18,15,L"くコ8ミ");
+    wattroff(splashwnd->window,COLOR_PAIR(1));
+    wattron(splashwnd->window,COLOR_PAIR(2));
+    mvwaddwstr(splashwnd->window,19,15,L"くコ:彡");
+    wattroff(splashwnd->window,COLOR_PAIR(2));
 
   //How so Blur?
     wattron(splashwnd->window,COLOR_PAIR(3));
@@ -445,6 +452,12 @@ void print_msgs()
     if(linenum > 0)
       mvwaddstr(msgwnd->window,linenum, namestart, uimsg->username);
     wattroff(msgwnd->window,A_BOLD);
+    if(linenum <= 0)
+    {
+      wattroff(msgwnd->window,COLOR_PAIR(color));    
+      pthread_mutex_unlock(&disp_mutex);
+      break;
+    }
     linenum-=3;
     /*    if(curr->prev != NULL)
     {
