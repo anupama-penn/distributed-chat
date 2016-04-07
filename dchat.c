@@ -178,10 +178,16 @@ void *receive_UDP(void* t)
 	case VICTORY:
 	  break;
 	case JOIN_REQUEST:
+	  //message from someone who wants to join
+
 	  break;
 	case LEADER_INFO:
+	  //if someone asked to join, but they didn't ask the leader, instead of sending a JOIN, send them this. 
+	  //If you receive this, repeat the JOIN_REQUEST, but to the leader. 
 	  break;
 	case JOIN:
+	  //announcement that someone has successfully joined
+
 	  break;
 	default:
 	  printf("\nUnrecognized packet type: %d\n", newpacket->packettype);
@@ -320,6 +326,29 @@ client_t* add_client(char username[], char hostname[], int portnum, bool_t islea
   newclient->isleader = isleader;
   add_elem(CLIENTS,(void*)newclient);
   return newclient;
+}
+
+void remove_client(char hostname[], int portnum)
+{
+  client_t* client;
+  node_t* curr = CLIENTS->head;
+  bool_t found = FALSE;
+  while(curr != NULL)
+  {
+    client = ((client_t*)curr->elem);
+    if(strcmp(hostname,client->hostname) == 0 && portnum == client->portnum)
+    {
+      found = TRUE;
+      break;
+    }
+    curr = curr->next;
+  }
+  if(found)
+  {
+    remove_node(CLIENTS,curr);
+  }
+  free(client);
+  client = NULL;
 }
 
 

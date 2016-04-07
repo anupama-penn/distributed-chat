@@ -214,3 +214,4 @@ bool_t initialize_data_structures();
 //void shutdown();
 
 client_t* add_client(char username[], char hostname[], int portnum, bool_t isleader);
+void remove_client(char hostname[], int portnum);
