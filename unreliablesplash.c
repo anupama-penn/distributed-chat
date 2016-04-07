@@ -92,32 +92,6 @@ void splash()
   printf("\n");
 }
 
-void splash2()
-{
-  printf("\n");
-  printf("\E[1m\E[34m  $$$$  $$$$                                  $$$$ $$$$            $$$$       $$$$\E(B\E[m\n");
-  printf("\E[1m\E[34m  $$$$  $$$$                                  $$$$ ****            $$$$       $$$$\E(B\E[m\n");
-  printf("\E[1m\E[34m  $$$$  $$$$ $$$o$$$o.  $$$o$$$o.   .o$$$$o.  $$$$ $$$$  .o$$$$$o. $$$$o$$o.  $$$$  .o$$$$o.\E(B\E[m\n");
-  printf("\E[1m\E[34m  $$$$  $$$$ $$$$  $$$. $$$$  $$$o .$$$  $$$o $$$$ $$$$  ***  $$$$ $$$$  $$$. $$$$ .$$$  $$$o\E(B\E[m\n");
-  printf("\E[1m\E[34m  $$$$  $$$$ $$$$  $$$$ $$$$  $$$$ $$$$$$$$$$ $$$$ $$$$  o$$$$$$$$ $$$$  $$$$ $$$$ $$$$$$$$$$\E(B\E[m\n");
-  printf("\E[1m\E[34m  $$$$  $$$$ $$$$  $$$$ $$$$       *$$$  oooo $$$$ $$$$ $$$$  $$$$ $$$$  $$$* $$$$ *$$$  oooo\E(B\E[m\n");
-  printf("\E[1m\E[34m  '*$$$$*$$$ $$$$  $$$$ $$$$        '*$$$$$*' $$$$ $$$$  *$$$$*$$$ $$$*$$$*'  $$$$  '*$$$$$*'\E(B\E[m\n");
-  printf("\E[1m\E(B\E[m\n");
-  printf("\E[1m\E[36m   .o$$$$o.  $$$$                          \E[37mo$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$o\E(B\E[m\n");
-  printf("\E[1m\E[36m  o$$$  $$$o $$$$                  $$$$    \E[37m$$                                              \E[37m$$\E(B\E[m\n");
-  printf("\E[1m\E[36m  $$$$  $$$$ $$$$$$$o.   .o$$$$$o. $$$$$$  \E[37m$$         \E[34mくコB彡  \E[36mくコ:ミ     \E[33m\E[5mHow so Blur?\E[25m    \E[37m$$\E(B\E[m\n");
-  printf("\E[1m\E[36m  $$$$       $$$$  $$$o  ***  $$$$ $$$$    \E[37m$$    \E[36mくコ8ミ       \E[34mくコ8彡  \E[36mくコ:ミ            \E[37m$$\E(B\E[m\n");
-  printf("\E[1m\E[36m  $$$$  $$$$ $$$$  $$$$  o$$$$$$$$ $$$$    \E[37m$$               \E[33m\E[5mHow so Blur?\E[25m        \E[34mくコ8彡    \E[37m$$\E(B\E[m\n");
-  printf("\E[1m\E[36m  *$$$  $$$* $$$$  $$$$ $$$$  $$$$ $$$$    \E[37m$$  \E[34mくコBミ        \E[34mくコB彡         \E[36mくコ8ミ      \E[37m$$\E(B\E[m\n");
-  printf("\E[1m\E[36m   '*$$$$*'  $$$$  $$$$  *$$$$*$$$ '*$$$$  \E[37m$$          \E[36mくコ8ミ    \E[33m\E[5mHow so Blur?\E[25m   \E[34mくコ:彡   \E[37m$$\E(B\E[m\n");
-  printf("\E[1m                                           \E[37m$$ \E[36m  くコ:ミ           \E[34mくコ8彡  \E[36mくコBミ         \E[37m$$\E(B\E[m\n");
-  printf("\E[1m\E[37m  $$$$$$$$$$  \E[34mくコ8ミ \E[37m#1  \E[25m\E[33mSpencer Caplan\E[25m   \E[37m$$       \E[33m\E[5mHow so Blur?\E[25m       \E[36mくコB彡   \E[34mくコ8ミ   \E[37m$$\E(B\E[m\n");
-  printf("\E[1m\E[37m  $$$$  $$$$  \E[36mくコ:彡 \E[37m#2  \E[25m\E[33mJordan~ Kodner\E[25m   \E[37m$$                                              \E[37m$$\E(B\E[m\n");
-  printf("\E[1m\E[37m  $$$$$$$$$$  \E[34mくコBミ \E[37m#3  \E[25m\E[33mAnupama Kumar~\E[25m   \E[37m*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$*\E(B\E[m\n");
-  printf("\n");
-}
-
-
 void *splashcurses(void *t)
 {
   init_pair(1, COLOR_BLUE, COLOR_BLACK);
@@ -162,30 +136,6 @@ void *splashcurses(void *t)
   mvwaddwstr(splashwnd->window,20,27,L"Anupama Kumar~");
   wattroff(splashwnd->window,COLOR_PAIR(3));
   pthread_mutex_unlock(&disp_mutex);
-  //sotong tank
-  //  mvwaddwstr(splashwnd->window,10,44,L"o$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$o");
-  //  mvwaddwstr(splashwnd->window,11,44,L"$$                                              $$");
-  //  mvwaddwstr(splashwnd->window,12,44,L"$$       くコBミ  くコ:彡       How so Blur?    $$");
-  //  mvwaddwstr(splashwnd->window,13,44,L"$$  くコ8彡           くコ8ミ  くコ:彡          $$");
-  //  mvwaddwstr(splashwnd->window,14,44,L"$$               How so Blur?          くコ8ミ  $$");
-  //  mvwaddwstr(splashwnd->window,15,44,L"$$    くコB彡    くコBミ         くコ8彡        $$");
-  //  mvwaddwstr(splashwnd->window,16,44,L"$$            くコ8彡  How so Blur? くコ:ミ     $$");
-  //  mvwaddwstr(splashwnd->window,17,44,L"$$ くコ:彡           くコ8ミ      くコB彡       $$");
-  //  mvwaddwstr(splashwnd->window,18,44,L"$$       How so Blur?     くコBミ       くコ8彡 $$");
-  //  mvwaddwstr(splashwnd->window,19,44,L"$$                                              $$");
-  //  mvwaddwstr(splashwnd->window,20,44,L"*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$*");
-  /*  printf("   .o$$$$o.  $$$$                          o$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$o");
-  printf("  o$$$  $$$o $$$$                  $$$$    $$                                              $$");
-  printf("  $$$$  $$$$ $$$$$$$o.   .o$$$$$o. $$$$$$  $$         くコB彡  くコ:ミ     How so Blur?    $$");
-  printf("  $$$$       $$$$  $$$o  ***  $$$$ $$$$    $$    くコ8ミ       くコ8彡  くコ:ミ            $$");
-  printf("  $$$$  $$$$ $$$$  $$$$  o$$$$$$$$ $$$$    $$               How so Blur?        くコ8彡    $$");
-  printf("  *$$$  $$$* $$$$  $$$$ $$$$  $$$$ $$$$    $$  くコBミ        くコB彡         くコ8ミ      $$");
-  printf("   '*$$$$*'  $$$$  $$$$  *$$$$*$$$ '*$$$$  $$          くコ8ミ    How so Blur?   くコ:彡   $$");
-  printf("                                           $$   くコ:ミ           くコ8彡  くコBミ         $$");
-  printf("  $$$$$$$$$$  くコ8ミ #2  Spencer Caplan   $$       How so Blur?       くコB彡   くコ8ミ   $$");
-  printf("  $$$$  $$$$  くコ:彡 #2  Jordan~ Kodner   $$                                              $$");
-  printf("  $$$$$$$$$$  くコBミ #3  Anupama Kumar~   *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$*");
-  */
 
   while(1){
     pthread_mutex_lock(&disp_mutex);
@@ -440,7 +390,7 @@ void print_msgs()
     }
     for(j = linenum-1; j < linenum+uimsg->numlines+2; j++)
     {
-      if(linenum-1+j > 0)
+      if(j > 0)
       {
       	mvwaddch(msgwnd->window,j,namestart-2,'*');
       	mvwaddch(msgwnd->window,j,uimsg->maxwidth+start+1,'*');
@@ -666,6 +616,7 @@ void initui(int isdebug)
 
   //  splash();
   mainwnd = initscr();
+  keypad(stdscr,TRUE);
   setlocale(LC_ALL, "en_US.utf8");
   start_color();
 
@@ -724,12 +675,17 @@ void initui(int isdebug)
   {
     d = wgetch(focuswnd->window);
     if(d == '\t')
-   {
-     nextfocus();
-   }
-    else
-      draw(d);
+    {
+      nextfocus();
     }
+    else
+    {
+      if(focuswnd == inputwnd)
+	draw(d);
+      else if(focuswnd == msgwnd)
+	print_msg("keyboard","I pressed a key!");
+    }
+  }
   
 }
 
