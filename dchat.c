@@ -114,7 +114,6 @@ void receive_UDP_packet()
     memset(&addr,0,sizeof(addr));
     addr.sin_family=AF_INET;
     addr.sin_addr.s_addr=htonl(INADDR_ANY); /* N.B.: differs from sender */
-    printf("port %d\n",LOCALPORT);
     addr.sin_port=htons(LOCALPORT);
     
     //bind to receive address
@@ -336,7 +335,7 @@ void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
     if(remainder > 0)
       totalpacketsrequired++;
     
-    fd = socket(AF_INET,SOCK_DGRAM,0);
+    fd = socket(PF_INET,SOCK_DGRAM,0);
     
     if (fd < 0) {
         fprintf(stderr,"socket create failed");
@@ -356,16 +355,21 @@ void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
     while(curr != NULL)
     {
         memset(&addr, 0, sizeof(addr));
-        
         addr.sin_family=AF_INET;
         addr.sin_port=htons(((client_t*)curr->elem)->portnum);
         
-        if (inet_aton(((client_t*)curr->elem)->hostname, &addr.sin_addr)==0) {
-            fprintf(stderr, "inet_aton() failed\n");
-            exit(1);
-        }
-	addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-        
+	//TODO uncomment this
+	//        if (inet_aton(((client_t*)curr->elem)->hostname, &addr.sin_addr)==0) {
+	//            fprintf(stderr, "inet_aton() failed\n");
+	//            exit(1);
+	//        }
+	addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //TODO get rid of this
+	if((connect(fd, (struct sockaddr*)&addr, sizeof(addr))) < 0) //TODO and this
+	{
+	  perror("simplex-talk: connect");
+	  exit(1);
+	}
+
 	int messageindex = 0;
 	int i;
 	for(i = 0; i < totalpacketsrequired; i++)
@@ -380,6 +384,7 @@ void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
             exit(1);
 	  }
 	}
+	printf("sent?\n");
 	curr = curr->next;
     }
     //close(fd);
@@ -410,14 +415,14 @@ int main(int argc, char* argv[]){
   {
     LOCALPORT = 6000;
     printf("I'm 6000\n");
-    add_client("follower\0","127.0.0.1\0",6000,FALSE);
+    add_client("follower\0","127.0.0.1\0",5000,FALSE);
     receive_UDP_packet();
   }
   else if(strcmp(argv[1],"6000"))
   {
     LOCALPORT = 5000;
     printf("I'm 5000\n");
-    add_client("leader\0","127.0.0.1\0",5000,TRUE);
+    add_client("leader\0","127.0.0.1\0",6000,TRUE);
     multicast_UDP(CHAT, "name", "hello");
   }
 
