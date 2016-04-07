@@ -20,7 +20,7 @@ typedef struct uimessage_t
 {
   char* username;
   int userid;
-  char** message;
+  char* message;
   int numlines;
 } uimessage_t;
 
@@ -288,35 +288,53 @@ void add_msg(char* user, char message[])
   int numlines = strlen(message)/maxline;
   if(strlen(message)%maxline > 0)
     numlines++;
-  char** msglines = (char**)malloc(sizeof(char)*numlines*maxline);
+  char* msglines = (char*)malloc(sizeof(char)*numlines*maxline+numlines);
   int lo = 0;
   int hi = 0+maxline;
   int index = 0;
 
-  while(lo+maxline < strlen(message))
+  if(strlen(message) > maxline)
   {
-    msglines[index] = (char*)malloc(sizeof(char)*maxline+1);
-    strncpy(msglines[index],&message[lo],lo+maxline);
-    msglines[index][maxline] = '\0';
+    strncpy(msglines,&message[lo],maxline);
     lo += maxline;
-    index++;
+    strcat(msglines,"\n");
+    while(lo+maxline < strlen(message))
+    {
+      strncat(msglines,&message[lo],maxline);
+      lo += maxline;
+      strcat(msglines,"\n");
+    }
+    strncat(msglines,&message[lo],strlen(&message[lo]));
+    //    strncat(msglines,&message[lo],strlen(&message[lo]));
+    strcat(msglines,"\n");
   }
-  msglines[index] = (char*)malloc(sizeof(char)*maxline);
-  strncpy(msglines[index],&message[lo],strlen(&message[lo]));
-  uimessage_t* newmessage = (uimessage_t*)malloc(sizeof(uimessage_t));
-  newmessage->username = user;
-  newmessage->userid = 1;
-  newmessage->message = msglines;
-  newmessage->numlines = numlines;
-  add_elem(MSGS, (void*)newmessage);
-
-  int i = 0;
-  for(i = numlines-1; i >= 0; i--)
+  else
   {
-    //    mvwaddstr(msgwnd->window,msgwnd->nrows-2-i, 38, "hello");
-    mvwaddstr(msgwnd->window,msgwnd->nrows-2+i-numlines, 38, msglines[i]);
+    strcpy(msglines,&message[lo]);
+    strcat(msglines,"\n");
   }
-  wrefresh(msgwnd->window);
+
+  if(MSGS->tail != NULL && strcmp(((uimessage_t*)MSGS->tail->elem)->username,user) == 0)
+  {
+    char* prevmsg = ((uimessage_t*)MSGS->tail->elem)->message;
+    char* combinedmsg = (char*)malloc(sizeof(char)*(strlen(msglines)+strlen(prevmsg)+1));
+    strcpy(combinedmsg,prevmsg);
+    strcat(combinedmsg,msglines);
+    free(prevmsg);
+    prevmsg = NULL;
+    ((uimessage_t*)MSGS->tail->elem)->message = combinedmsg;
+    ((uimessage_t*)MSGS->tail->elem)->numlines += numlines;
+  }
+  else
+  {
+    uimessage_t* newmessage = (uimessage_t*)malloc(sizeof(uimessage_t));
+    newmessage->username = user;
+    newmessage->userid = 1;
+    newmessage->message = msglines;
+    newmessage->numlines = numlines;
+    add_elem(MSGS, (void*)newmessage);
+  }
+
 }
 
 void print_msgs()
@@ -338,17 +356,48 @@ void print_msgs()
       start = msgwnd->ncols/2;
       namestart = msgwnd->ncols-2-strlen(uimsg->username);
     }
-    int i = 0;
+
     pthread_mutex_lock(&disp_mutex);
-    for(i = uimsg->numlines-1; i >= 0; i--)
+    int i = 0;
+    char currchar = ' ';
+    linenum-=uimsg->numlines;
+    msgwnd->r = linenum;
+    msgwnd->c = start;
+
+    currchar = uimsg->message[i];
+    while(currchar != NULL)
+    {     
+      if(currchar == '\n')
+      {
+	linenum++;
+	msgwnd->r = linenum;
+	msgwnd->c = start;
+	i++;
+	currchar = uimsg->message[i];
+	continue;
+      }
+      if(linenum > 0)
+	mvwaddch(msgwnd->window,msgwnd->r,msgwnd->c,currchar);
+      msgwnd->c++;
+      i++;
+      currchar = uimsg->message[i];
+    }
+    linenum-=uimsg->numlines;
+    /*for(i = uimsg->numlines-1; i >= 0; i--)
     {
       //    mvwaddstr(msgwnd->window,msgwnd->nrows-2-i, 38, "hello");
-      mvwaddstr(msgwnd->window,linenum, start, uimsg->message[i]);
-      linenum--;
+      mvwaddstr(msgwnd->window,linenum, start, uimsg->message);
+      linenum-=uimsg->numlines;
+      break;
+      //   linenum--;
+
       if(linenum == 0)
 	break;
-    }
+	}*/
     pthread_mutex_unlock(&disp_mutex);
+    linenum--;
+    if(linenum < 1)
+      break;
     pthread_mutex_lock(&disp_mutex);
     wattron(msgwnd->window,COLOR_PAIR(1));    
     if(curr->prev != NULL)
@@ -384,9 +433,12 @@ void *spoof_chats(void *t)
   while(1)
   {
     print_msg("Alice", "Hi, how are you doing? I'm fine personally, but I'm just a function parameter, so I don't really know what I'm talking about. You know what I mean?");
+    sleep(1);
+    print_msg("Alice","Have you met Bob?");
     sleep(5);
     print_msg("Bob","Am Bob.");
-    print_msg("Bob","Boon? Me ah?.");
+    sleep(1);
+    print_msg("Bob","Boon? Me ah?");
     sleep(2);
   }
   pthread_exit((void *)t);
