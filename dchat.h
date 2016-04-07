@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include <time.h>
 
-//#include "queue.h"
+#include "queue.h"
 #include "llist.h"
 
 #define QUEUE_SIZE 128
@@ -24,13 +24,13 @@
 #define MAXSENDERLEN 64
 #define MAXUIDLEN 128
 #define MAXPACKETLEN 1024
-#define MAXPACKETBODYLEN MAXPACKETLEN-MAXSENDERLEN-MAXUIDLEN-(2*sizeof(int))-sizeof(int)-(5*sizeof(char))
+#define MAXPACKETBODYLEN 815// MAXPACKETLEN-MAXSENDERLEN-MAXUIDLEN-(2*sizeof(int))-sizeof(int)-(5*sizeof(char))
 #define MESSAGEMULTIPLIER 10
 #define MAXCHATMESSAGELEN MAXPACKETBODYLEN*MESSAGEMULTIPLIER
 
 #define PACKETDELIM "\n"
 
-#define LOCALPORT 2886
+#define DEFAULTPORT 2886
 
 enum bool
 {
@@ -65,6 +65,7 @@ void holdElection();
 //cname userdata;
 //static char buf[1024];
 
+static int LOCALPORT = DEFAULTPORT;
 static llist_t* UNSEQ_CHAT_MSGS;
 static llist_t* CLIENTS;
 static queue_t* HBACK_Q; 
@@ -205,3 +206,5 @@ bool_t initialize_data_structures();
 //int check();
 
 //void shutdown();
+
+client_t* add_client(char username[], char hostname[], int portnum, bool_t isleader);

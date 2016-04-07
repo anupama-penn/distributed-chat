@@ -102,6 +102,7 @@ void receive_UDP_packet()
     socklen_t addrlen;
     char buf[MAXPACKETLEN];
 
+    //fd = socket(PF_INET,SOCK_DGRAM,0);
     fd = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
     if (fd < 0) {
         perror("socket");
@@ -126,8 +127,10 @@ void receive_UDP_packet()
     while (1) {
         addrlen = sizeof(addr);
         
+	printf("Waiting...\n");
         nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &addr,&addrlen);
         
+	printf("I got something!\t%d bytes\n",nbytes);
         if (nbytes <0) {
             perror("recvfrom");
             exit(1);
@@ -164,6 +167,7 @@ void receive_UDP_packet()
 	  break;
 	case SEQUENCE:
 	  //This is a sequencing message. Find the corresponding chat message in the unsequenced message list and enqueue it properly
+	  //If the corresponding message is not complete, ask the leader for its missing part first. It will be received as a chat. 
 	  break;
 	case CHECKUP:
 	  break;
@@ -232,7 +236,7 @@ void receive_UDP_packet()
 void getLocalIp(char *buf){
     
     bzero(buf,1024);
-    //    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
     
     // connect?
     
@@ -307,7 +311,16 @@ void destroy_data_structures() {
     }
     }*/
 
-
+client_t* add_client(char username[], char hostname[], int portnum, bool_t isleader)
+{
+  client_t* newclient = (client_t*)malloc(sizeof(client_t));
+  strcpy(newclient->username,username);
+  strcpy(newclient->hostname,hostname);
+  newclient->portnum = portnum;
+  newclient->isleader = isleader;
+  add_elem(CLIENTS,(void*)newclient);
+  return newclient;
+}
 
 
 
@@ -315,13 +328,14 @@ void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
     
     struct sockaddr_in addr;
     int fd;
+    printf("prepping to send\n");
 
-    int totalpacketsrequired = strlen(messagebody) / MAXPACKETBODYLEN; 
+    int totalpacketsrequired = (strlen(messagebody)) / 815; 
     int remainder =  strlen(messagebody) % MAXPACKETBODYLEN; 
     if(remainder > 0)
       totalpacketsrequired++;
     
-    fd = socket(AF_INET,SOCK_DGRAM,0);
+    fd = socket(PF_INET,SOCK_DGRAM,0);
     
     if (fd < 0) {
         fprintf(stderr,"socket create failed");
@@ -336,18 +350,19 @@ void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
     char uid[MAXUIDLEN];
     sprintf(uid,"%d",timestamp);
 
+
+    printf("total packets required: %d\n", totalpacketsrequired);
     while(curr != NULL)
     {
         memset(&addr, 0, sizeof(addr));
-        
         addr.sin_family=AF_INET;
         addr.sin_port=htons(((client_t*)curr->elem)->portnum);
         
-        if (inet_aton(((client_t*)curr->elem)->hostname, &addr.sin_addr)==0) {
-            fprintf(stderr, "inet_aton() failed\n");
-            exit(1);
-        }
-        
+	if (inet_aton(((client_t*)curr->elem)->hostname, &addr.sin_addr)==0) {
+	  fprintf(stderr, "inet_aton() failed\n");
+	  exit(1);
+	}
+
 	int messageindex = 0;
 	int i;
 	for(i = 0; i < totalpacketsrequired; i++)
@@ -356,12 +371,13 @@ void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
 	  messageindex += MAXPACKETBODYLEN;
 
 	  sprintf(packetbuf, "%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, messagebody);
-        
+	  printf("now sending %s to %s:%d\n",packetbuf, ((client_t*)curr->elem)->hostname, ((client_t*)curr->elem)->portnum);
 	  if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
             fprintf(stderr, "sendto");
             exit(1);
 	  }
 	}
+	printf("sent?\n");
 	curr = curr->next;
     }
     //close(fd);
@@ -383,8 +399,29 @@ int main(int argc, char* argv[]){
     
   CLIENTS = (llist_t*) malloc(sizeof(llist_t));
   UNSEQ_CHAT_MSGS = (llist_t*) malloc(sizeof(llist_t));
+  initialize_data_structures();
+
+  printf("I'm awake.\n");
+
+  //add the other fake guy
+  if(strcmp(argv[1],"5000"))
+  {
+    LOCALPORT = 6000;
+    printf("I'm 6000\n");
+    add_client("follower\0","127.0.0.1\0",5000,FALSE);
+    receive_UDP_packet();
+  }
+  else if(strcmp(argv[1],"6000"))
+  {
+    LOCALPORT = 5000;
+    printf("I'm 5000\n");
+    add_client("leader\0","127.0.0.1\0",6000,TRUE);
+    multicast_UDP(CHAT, "name", "hello");
+  }
 
 
+
+  while(1);
   return 0;
   /*    pid_t pID = fork();
     if (pID == 0) {
