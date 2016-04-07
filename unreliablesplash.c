@@ -468,7 +468,7 @@ void draw(char dc)
     MY_MSG_INDEX = 0;
     return;
   }
-  if(dc == '\b')
+  if(dc == 127)
   {
     waddch(focuswnd->window,' ');
 
@@ -483,7 +483,11 @@ void draw(char dc)
     }
     else
       focuswnd->c--;
+
     wmove(focuswnd->window, focuswnd->r, focuswnd->c);
+    waddch(focuswnd->window,' ');
+    wmove(focuswnd->window, focuswnd->r, focuswnd->c);
+
     if(MY_MSG_INDEX > 0)
       MY_MSG_INDEX--;
     MY_MSG[MY_MSG_INDEX] = '\0';
