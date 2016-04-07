@@ -102,6 +102,7 @@ void receive_UDP_packet()
     socklen_t addrlen;
     char buf[MAXPACKETLEN];
 
+    //fd = socket(PF_INET,SOCK_DGRAM,0);
     fd = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
     if (fd < 0) {
         perror("socket");
@@ -113,6 +114,7 @@ void receive_UDP_packet()
     memset(&addr,0,sizeof(addr));
     addr.sin_family=AF_INET;
     addr.sin_addr.s_addr=htonl(INADDR_ANY); /* N.B.: differs from sender */
+    printf("port %d\n",LOCALPORT);
     addr.sin_port=htons(LOCALPORT);
     
     //bind to receive address
@@ -126,8 +128,10 @@ void receive_UDP_packet()
     while (1) {
         addrlen = sizeof(addr);
         
+	printf("Waiting...\n");
         nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &addr,&addrlen);
         
+	printf("I got something!\t%d bytes\n",nbytes);
         if (nbytes <0) {
             perror("recvfrom");
             exit(1);
@@ -325,8 +329,9 @@ void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
     
     struct sockaddr_in addr;
     int fd;
+    printf("prepping to send\n");
 
-    int totalpacketsrequired = strlen(messagebody) / MAXPACKETBODYLEN; 
+    int totalpacketsrequired = (strlen(messagebody)) / 815; 
     int remainder =  strlen(messagebody) % MAXPACKETBODYLEN; 
     if(remainder > 0)
       totalpacketsrequired++;
@@ -346,6 +351,8 @@ void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
     char uid[MAXUIDLEN];
     sprintf(uid,"%d",timestamp);
 
+
+    printf("total packets required: %d\n", totalpacketsrequired);
     while(curr != NULL)
     {
         memset(&addr, 0, sizeof(addr));
@@ -357,6 +364,7 @@ void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
             fprintf(stderr, "inet_aton() failed\n");
             exit(1);
         }
+	addr.sin_addr.s_addr = inet_addr("127.0.0.1");
         
 	int messageindex = 0;
 	int i;
@@ -366,7 +374,7 @@ void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
 	  messageindex += MAXPACKETBODYLEN;
 
 	  sprintf(packetbuf, "%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, messagebody);
-        
+	  printf("now sending %s to %s:%d\n",packetbuf, ((client_t*)curr->elem)->hostname, ((client_t*)curr->elem)->portnum);
 	  if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
             fprintf(stderr, "sendto");
             exit(1);
@@ -400,10 +408,22 @@ int main(int argc, char* argv[]){
   //add the other fake guy
   if(strcmp(argv[1],"5000"))
   {
-
+    LOCALPORT = 6000;
+    printf("I'm 6000\n");
+    add_client("follower\0","127.0.0.1\0",6000,FALSE);
+    receive_UDP_packet();
+  }
+  else if(strcmp(argv[1],"6000"))
+  {
+    LOCALPORT = 5000;
+    printf("I'm 5000\n");
+    add_client("leader\0","127.0.0.1\0",5000,TRUE);
+    multicast_UDP(CHAT, "name", "hello");
   }
 
-  multicast_UDP(CHAT, "name", "hello");
+
+
+  while(1);
   return 0;
   /*    pid_t pID = fork();
     if (pID == 0) {
