@@ -1,6 +1,6 @@
 #define _XOPEN_SOURCE_EXTENDED 1
 
-//gcc unreliablesplash.c llist.c -lncursesw && a.out
+//gcc -pthread unreliablesplash.c llist.c -lncursesw && a.out
 
 #include <pthread.h>
 #include <stdio.h>
@@ -33,6 +33,8 @@ typedef struct window_t
   int ncols;
   int hasfocus;
 } window_t;
+
+pthread_mutex_t disp_mutex;
 
 llist_t* MSGS;
 llist_t* INFOS;
@@ -107,12 +109,13 @@ void splash2()
 }
 
 
-void splashcurses()
+void *splashcurses(void *t)
 {
   init_pair(1, COLOR_BLUE, COLOR_BLACK);
   init_pair(2, COLOR_CYAN, COLOR_BLACK);
   init_pair(3, COLOR_YELLOW, COLOR_BLACK);
   init_pair(4, COLOR_WHITE, COLOR_BLACK);
+  pthread_mutex_lock(&disp_mutex);
   wattron(splashwnd->window,COLOR_PAIR(1));
   wattron(splashwnd->window,A_BOLD);
   //Unreliable
@@ -156,23 +159,125 @@ void splashcurses()
   mvwaddwstr(splashwnd->window,19,23,L"Jordan~ Kodner");
   mvwaddwstr(splashwnd->window,20,23,L"Anupama Kumar~");
   wattroff(splashwnd->window,COLOR_PAIR(3));
-
+  pthread_mutex_unlock(&disp_mutex);
   //sotong tank
-  mvwaddwstr(splashwnd->window,10,44,L"o$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$o");
-  mvwaddwstr(splashwnd->window,11,44,L"$$                                              $$");
-  mvwaddwstr(splashwnd->window,12,44,L"$$       くコBミ  くコ:彡       How so Blur?    $$");
-  mvwaddwstr(splashwnd->window,13,44,L"$$  くコ8彡           くコ8ミ  くコ:彡          $$");
-  mvwaddwstr(splashwnd->window,14,44,L"$$               How so Blur?          くコ8ミ  $$");
-  mvwaddwstr(splashwnd->window,15,44,L"$$    くコB彡    くコBミ         くコ8彡        $$");
-  mvwaddwstr(splashwnd->window,16,44,L"$$            くコ8彡  How so Blur? くコ:ミ     $$");
-  mvwaddwstr(splashwnd->window,17,44,L"$$ くコ:彡           くコ8ミ      くコB彡       $$");
-  mvwaddwstr(splashwnd->window,18,44,L"$$       How so Blur?     くコBミ       くコ8彡 $$");
-  mvwaddwstr(splashwnd->window,19,44,L"$$                                              $$");
-  mvwaddwstr(splashwnd->window,20,44,L"*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$*");
+  //  mvwaddwstr(splashwnd->window,10,44,L"o$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$o");
+  //  mvwaddwstr(splashwnd->window,11,44,L"$$                                              $$");
+  //  mvwaddwstr(splashwnd->window,12,44,L"$$       くコBミ  くコ:彡       How so Blur?    $$");
+  //  mvwaddwstr(splashwnd->window,13,44,L"$$  くコ8彡           くコ8ミ  くコ:彡          $$");
+  //  mvwaddwstr(splashwnd->window,14,44,L"$$               How so Blur?          くコ8ミ  $$");
+  //  mvwaddwstr(splashwnd->window,15,44,L"$$    くコB彡    くコBミ         くコ8彡        $$");
+  //  mvwaddwstr(splashwnd->window,16,44,L"$$            くコ8彡  How so Blur? くコ:ミ     $$");
+  //  mvwaddwstr(splashwnd->window,17,44,L"$$ くコ:彡           くコ8ミ      くコB彡       $$");
+  //  mvwaddwstr(splashwnd->window,18,44,L"$$       How so Blur?     くコBミ       くコ8彡 $$");
+  //  mvwaddwstr(splashwnd->window,19,44,L"$$                                              $$");
+  //  mvwaddwstr(splashwnd->window,20,44,L"*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$*");
+  /*  printf("   .o$$$$o.  $$$$                          o$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$o");
+  printf("  o$$$  $$$o $$$$                  $$$$    $$                                              $$");
+  printf("  $$$$  $$$$ $$$$$$$o.   .o$$$$$o. $$$$$$  $$         くコB彡  くコ:ミ     How so Blur?    $$");
+  printf("  $$$$       $$$$  $$$o  ***  $$$$ $$$$    $$    くコ8ミ       くコ8彡  くコ:ミ            $$");
+  printf("  $$$$  $$$$ $$$$  $$$$  o$$$$$$$$ $$$$    $$               How so Blur?        くコ8彡    $$");
+  printf("  *$$$  $$$* $$$$  $$$$ $$$$  $$$$ $$$$    $$  くコBミ        くコB彡         くコ8ミ      $$");
+  printf("   '*$$$$*'  $$$$  $$$$  *$$$$*$$$ '*$$$$  $$          くコ8ミ    How so Blur?   くコ:彡   $$");
+  printf("                                           $$   くコ:ミ           くコ8彡  くコBミ         $$");
+  printf("  $$$$$$$$$$  くコ8ミ #2  Spencer Caplan   $$       How so Blur?       くコB彡   くコ8ミ   $$");
+  printf("  $$$$  $$$$  くコ:彡 #2  Jordan~ Kodner   $$                                              $$");
+  printf("  $$$$$$$$$$  くコBミ #3  Anupama Kumar~   *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$*");
+  */
 
+  while(1){
+    pthread_mutex_lock(&disp_mutex);
+    mvwaddwstr(splashwnd->window,10,44,L"o$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$o");
+    mvwaddwstr(splashwnd->window,11,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,12,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,13,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,14,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,15,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,16,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,17,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,18,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,19,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,20,44,L"*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$*");
+
+  //sotong
+    wattron(splashwnd->window,COLOR_PAIR(2));
+    mvwaddwstr(splashwnd->window,12,64,L"くコ:ミ");
+    mvwaddwstr(splashwnd->window,13,48,L"くコ8ミ                 くコ:ミ");
+    mvwaddwstr(splashwnd->window,15,73,L"くコ8ミ");
+    mvwaddwstr(splashwnd->window,16,54,L"くコ8ミ");
+    mvwaddwstr(splashwnd->window,17,51,L"くコ:ミ                    くコBミ");
+    mvwaddwstr(splashwnd->window,18,74,L"くコB彡");
+    wattroff(splashwnd->window,COLOR_PAIR(2));
+    wattron(splashwnd->window,COLOR_PAIR(1));
+    mvwaddwstr(splashwnd->window,12,55,L"くコB彡");
+    mvwaddwstr(splashwnd->window,13,64,L"くコ8彡");
+    mvwaddwstr(splashwnd->window,14,79,L"くコ8彡");
+    mvwaddwstr(splashwnd->window,15,46,L"くコBミ        くコB彡");
+    mvwaddwstr(splashwnd->window,16,84,L"くコ:彡");
+    mvwaddwstr(splashwnd->window,17,69,L"くコ8彡");
+    mvwaddwstr(splashwnd->window,18,81,L"くコ8ミ");
+    wattroff(splashwnd->window,COLOR_PAIR(1));
+
+  //How so Blur?
+    wattron(splashwnd->window,COLOR_PAIR(3));
+    mvwaddwstr(splashwnd->window,12,76,L"How so Blur?");
+    mvwaddwstr(splashwnd->window,14,61,L"How so Blur?");
+    mvwaddwstr(splashwnd->window,16,67,L"How so Blur?");
+    mvwaddwstr(splashwnd->window,18,53,L"How so Blur?");
+    wattroff(splashwnd->window,COLOR_PAIR(3));
+    
+    wrefresh(splashwnd->window);
+    pthread_mutex_unlock(&disp_mutex);
+    sleep(1);
+    pthread_mutex_lock(&disp_mutex);
+    mvwaddwstr(splashwnd->window,10,44,L"o$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$o");
+    mvwaddwstr(splashwnd->window,11,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,12,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,13,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,14,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,15,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,16,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,17,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,18,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,19,44,L"$$                                              $$");
+    mvwaddwstr(splashwnd->window,20,44,L"*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$*");
+    
+    //sotong
+    wattron(splashwnd->window,COLOR_PAIR(2));
+    mvwaddwstr(splashwnd->window,12,62,L"くコ:彡");
+    mvwaddwstr(splashwnd->window,13,47,L"くコ8彡                     くコ:彡");
+    mvwaddwstr(splashwnd->window,15,77,L"くコ8彡");
+    mvwaddwstr(splashwnd->window,16,58,L"くコ8彡");
+    mvwaddwstr(splashwnd->window,17,47,L"くコ:彡                        くコB彡");
+    mvwaddwstr(splashwnd->window,18,70,L"くコBミ");
+    wattroff(splashwnd->window,COLOR_PAIR(2));
+    wattron(splashwnd->window,COLOR_PAIR(1));
+    mvwaddwstr(splashwnd->window,12,53,L"くコBミ");
+    mvwaddwstr(splashwnd->window,13,66,L"くコ8ミ");
+    mvwaddwstr(splashwnd->window,14,83,L"くコ8ミ");
+    mvwaddwstr(splashwnd->window,15,50,L"くコB彡    くコBミ");
+    mvwaddwstr(splashwnd->window,16,80,L"くコ:ミ");
+    mvwaddwstr(splashwnd->window,17,65,L"くコ8ミ");
+    mvwaddwstr(splashwnd->window,18,83,L"くコ8彡");
+    wattroff(splashwnd->window,COLOR_PAIR(1));
+
+  //How so Blur?
+    wattron(splashwnd->window,COLOR_PAIR(3));
+    mvwaddwstr(splashwnd->window,12,76,L"How so Blur?");
+    mvwaddwstr(splashwnd->window,14,61,L"How so Blur?");
+    mvwaddwstr(splashwnd->window,16,67,L"How so Blur?");
+    mvwaddwstr(splashwnd->window,18,53,L"How so Blur?");
+    wattroff(splashwnd->window,COLOR_PAIR(3));
+
+    wrefresh(splashwnd->window);
+    pthread_mutex_unlock(&disp_mutex);
+    sleep(1);
+    //    break;
+  }
 
   wattroff(splashwnd->window,A_BOLD);
-  wrefresh(splashwnd->window);
+  pthread_exit((void *)t);
+  //  wrefresh(splashwnd->window);
 }
 
 
@@ -219,7 +324,9 @@ void print_msgs()
   int linenum = msgwnd->nrows-2;
 
   node_t* curr = MSGS->tail;
+  pthread_mutex_lock(&disp_mutex);
   wclear(msgwnd->window);
+  pthread_mutex_unlock(&disp_mutex);
   setborder(msgwnd);
   while(curr != NULL)
   {
@@ -232,6 +339,7 @@ void print_msgs()
       namestart = msgwnd->ncols-2-strlen(uimsg->username);
     }
     int i = 0;
+    pthread_mutex_lock(&disp_mutex);
     for(i = uimsg->numlines-1; i >= 0; i--)
     {
       //    mvwaddstr(msgwnd->window,msgwnd->nrows-2-i, 38, "hello");
@@ -240,6 +348,8 @@ void print_msgs()
       if(linenum == 0)
 	break;
     }
+    pthread_mutex_unlock(&disp_mutex);
+    pthread_mutex_lock(&disp_mutex);
     wattron(msgwnd->window,COLOR_PAIR(1));    
     if(curr->prev != NULL)
     {
@@ -255,10 +365,12 @@ void print_msgs()
       linenum--;
     }
     wattroff(msgwnd->window,COLOR_PAIR(1));    
-
+    pthread_mutex_unlock(&disp_mutex);
     curr=curr->prev;
   }
-    wrefresh(msgwnd->window);
+  pthread_mutex_lock(&disp_mutex);
+  wrefresh(msgwnd->window);
+  pthread_mutex_unlock(&disp_mutex);
 }
 
 void print_msg(char* user, char message[])
@@ -321,8 +433,10 @@ void draw(char dc)
   if(focuswnd->c == focuswnd->ncols-2 && focuswnd->r == focuswnd->nrows-2)
     return;
 
+  pthread_mutex_lock(&disp_mutex);
   wdelch(focuswnd->window);
   winsch(focuswnd->window,dc);
+  pthread_mutex_unlock(&disp_mutex);
 
   MY_MSG[MY_MSG_INDEX] = dc;
   MY_MSG_INDEX++;
@@ -346,6 +460,7 @@ void draw(char dc)
 void setborder(window_t* wnd)
 {
   int color = 10;
+  pthread_mutex_lock(&disp_mutex);
   if(wnd->hasfocus == 1)
   {
     if(wnd == msgwnd)
@@ -363,16 +478,21 @@ void setborder(window_t* wnd)
   wattroff(wnd->window,COLOR_PAIR(color));
   wrefresh(wnd->window);
   wattroff(wnd->window,A_BOLD);
+  pthread_mutex_unlock(&disp_mutex);
 }
 
 void refresh_wnd(window_t* wnd)
 {
+  pthread_mutex_lock(&disp_mutex);
   wclear(wnd->window);
+  pthread_mutex_unlock(&disp_mutex);
   wnd->c = 2;
   wnd->r = 2;
   setborder(wnd);
+  pthread_mutex_lock(&disp_mutex);
   wmove(focuswnd->window,focuswnd->r,focuswnd->c);
   wrefresh(wnd->window);
+  pthread_mutex_unlock(&disp_mutex);
 }
 
 
@@ -389,7 +509,9 @@ window_t* init_wnd(int h, int w, int startr, int startc)
   newwnd->nrows = h;
   newwnd->hasfocus = 0;
   setborder(newwnd);
+  pthread_mutex_lock(&disp_mutex);
   wrefresh(newwnd->window);
+  pthread_mutex_unlock(&disp_mutex);
   return newwnd;
 }
 
@@ -467,7 +589,7 @@ void initui(int isdebug)
   focuswnd = focusable_wnds[1];
   setfocus(inputwnd);
 
-  splashcurses();
+  //  splashcurses();
 
   pthread_t threads[2];
   pthread_attr_t attr;
@@ -478,6 +600,7 @@ void initui(int isdebug)
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
   pthread_create(&threads[SYSCALL_THREADNUM], &attr, spoof_chats, (void *)SYSCALL_THREADNUM);
+  pthread_create(&threads[1], &attr, splashcurses, (void *)1);
 
   //  pthread_join(threads[SYSCALL_THREADNUM], &exitstatus);
 
