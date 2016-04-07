@@ -46,6 +46,8 @@ pthread_mutex_t disp_mutex;
 llist_t* MSGS;
 llist_t* INFOS;
 
+node_t* LAST_MSG_NODE;
+
 char MY_MSG[1024];
 int MY_MSG_INDEX;
 
@@ -303,7 +305,10 @@ void add_msg(char* user, char message[])
     newmessage->message = msglines;
     newmessage->numlines = numlines;
     newmessage->maxwidth = maxwidth;
-    add_elem(MSGS, (void*)newmessage);
+    int end = LAST_MSG_NODE == MSGS->tail;
+    node_t* newtail = add_elem(MSGS, (void*)newmessage);
+    if(end)
+      LAST_MSG_NODE = newtail;
   }
 
 }
@@ -312,7 +317,7 @@ void print_msgs()
 {
   int linenum = msgwnd->nrows-4;
 
-  node_t* curr = MSGS->tail;
+  node_t* curr = LAST_MSG_NODE;
   pthread_mutex_lock(&disp_mutex);
   wclear(msgwnd->window);
   pthread_mutex_unlock(&disp_mutex);
@@ -608,7 +613,7 @@ void nextfocus()
 
 void initui(int isdebug)
 {
-  char d;
+  int d;
 
   if(isdebug)
     return;
@@ -617,10 +622,12 @@ void initui(int isdebug)
   MY_MSG_INDEX = 0;
   MSGS = (llist_t*)malloc(sizeof(llist_t));
   init_list(MSGS);
+  LAST_MSG_NODE = MSGS->tail;
 
   //  splash();
   mainwnd = initscr();
-  keypad(stdscr,TRUE);
+  //  keypad(mainwnd,TRUE);
+  //  keypad(stdscr,TRUE);
   setlocale(LC_ALL, "en_US.utf8");
   start_color();
 
@@ -651,7 +658,7 @@ void initui(int isdebug)
   infownd = init_wnd(nrows-32, 97, 22, 1);
   inputwnd = init_wnd(11, 97, nrows-11, 1);
   msgwnd = init_wnd(nrows, ncols-99, 0, 98);
-  
+  keypad(msgwnd->window,TRUE);
   focusable_wnds[0] = infownd;
   focusable_wnds[1] = inputwnd;
   focusable_wnds[2] = msgwnd;
@@ -685,9 +692,27 @@ void initui(int isdebug)
     else
     {
       if(focuswnd == inputwnd)
-	draw(d);
+	draw((char)d);
       else if(focuswnd == msgwnd)
-	print_msg("keyboard","I pressed a key!");
+      {
+	wprintw(infownd->window," %d\n",d);
+	if(d == KEY_UP)
+	{
+	  if(LAST_MSG_NODE != MSGS->head)
+	  {
+	    LAST_MSG_NODE = LAST_MSG_NODE->prev;
+	    print_msgs();
+	  }
+	}
+	if(d == KEY_DOWN)
+	{
+	  if(LAST_MSG_NODE != MSGS->tail)
+	  {
+	    LAST_MSG_NODE = LAST_MSG_NODE->next;
+	    print_msgs();
+	  }
+	}
+      }
     }
   }
   
