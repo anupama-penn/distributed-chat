@@ -72,11 +72,11 @@ int message_compare(chatmessage_t* message1, chatmessage_t* message2)
 packet_t* parsePacket(char* buf){
   packet_t* input = malloc(sizeof(packet_t));
   strcpy(input->sender,strtok(buf,PACKETDELIM));
-  strcpy(input->uid,strtok(buf,PACKETDELIM));
-  input->packettype = atoi(strtok(buf,PACKETDELIM));
-  input->packetnum = atoi(strtok(buf,PACKETDELIM));
-  input->totalpackets = atoi(strtok(buf,PACKETDELIM));
-  strcpy(input->packetbody,strtok(buf,PACKETDELIM));
+  strcpy(input->uid,strtok(NULL,PACKETDELIM));
+  input->packettype = atoi(strtok(NULL,PACKETDELIM));
+  input->packetnum = atoi(strtok(NULL,PACKETDELIM));
+  input->totalpackets = atoi(strtok(NULL,PACKETDELIM));
+  strcpy(input->packetbody,strtok(NULL,PACKETDELIM));
   return input;
 }
 
@@ -93,7 +93,7 @@ chatmessage_t* find_chatmessage(char uid[])
   return NULL;
 }
 
-void receive_UDP_packet()
+void *receive_UDP(void* t)
 {
     
     struct sockaddr_in addr;
@@ -127,14 +127,14 @@ void receive_UDP_packet()
     while (1) {
         addrlen = sizeof(addr);
         
-	printf("Waiting...\n");
         nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &addr,&addrlen);
         
-	printf("I got something!\t%d bytes\n",nbytes);
         if (nbytes <0) {
             perror("recvfrom");
             exit(1);
         }
+
+	printf("RECEIVED:\n\t%s\n",buf);
 
 	packet_t* newpacket = parsePacket(buf);
 	chatmessage_t* message;
@@ -227,7 +227,7 @@ void receive_UDP_packet()
         printf("%s: %s\n", (*next_message_got).user_sent, (*next_message_got).msg_sent);
 	*/    
     }//end of while
-
+    pthread_exit((void *)t);
 }
 
 
@@ -324,11 +324,11 @@ client_t* add_client(char username[], char hostname[], int portnum, bool_t islea
 
 
 
-void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
+void multicast_UDP(packettype_t packettype, char sender[], char messagebody[]){
     
     struct sockaddr_in addr;
     int fd;
-    printf("prepping to send\n");
+    //    printf("prepping to send\n");
 
     int totalpacketsrequired = (strlen(messagebody)) / 815; 
     int remainder =  strlen(messagebody) % MAXPACKETBODYLEN; 
@@ -351,7 +351,7 @@ void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
     sprintf(uid,"%d",timestamp);
 
 
-    printf("total packets required: %d\n", totalpacketsrequired);
+    //    printf("total packets required: %d\n", totalpacketsrequired);
     while(curr != NULL)
     {
         memset(&addr, 0, sizeof(addr));
@@ -370,14 +370,13 @@ void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
 	  strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
 	  messageindex += MAXPACKETBODYLEN;
 
-	  sprintf(packetbuf, "%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, messagebody);
-	  printf("now sending %s to %s:%d\n",packetbuf, ((client_t*)curr->elem)->hostname, ((client_t*)curr->elem)->portnum);
+	  sprintf(packetbuf, "%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
+	  //	  printf("now sending %s to %s:%d\n",packetbuf, ((client_t*)curr->elem)->hostname, ((client_t*)curr->elem)->portnum);
 	  if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
             fprintf(stderr, "sendto");
             exit(1);
 	  }
 	}
-	printf("sent?\n");
 	curr = curr->next;
     }
     //close(fd);
@@ -388,13 +387,47 @@ void multicast_UDP( packettype_t packettype, char sender[], char messagebody[]){
 
 /*
 void shutdown(){
-    
+n    
     destroy_data_structures();
     exit(0);
     return NULL;
 }
 
 */
+
+void *get_user_input(void* t)
+{
+  char userinput[MAXCHATMESSAGELEN];
+  while(1)
+  {
+    scanf("%s",userinput);
+    char* sendstr = strdup(userinput);
+    multicast_UDP(CHAT,"myname", sendstr);
+    free(sendstr);
+  }
+  pthread_exit((void *)t);
+}
+
+void create_message_threads()
+{
+  int numthreads = 2;
+  pthread_t threads[numthreads];
+  pthread_attr_t attr;
+  void *exitstatus;
+  
+  //make sure threads are joinable
+  pthread_attr_init(&attr);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+  //start a thread for each
+  //TODO figure out how to do this simultaneously
+  pthread_create(&threads[RECEIVE_THREADNUM], &attr, receive_UDP, (void *)RECEIVE_THREADNUM);
+  pthread_create(&threads[SEND_THREADNUM], &attr, get_user_input, (void *)SEND_THREADNUM);
+
+  pthread_join(threads[RECEIVE_THREADNUM], &exitstatus);
+  pthread_join(threads[SEND_THREADNUM], &exitstatus);
+}
+
 int main(int argc, char* argv[]){
     
   CLIENTS = (llist_t*) malloc(sizeof(llist_t));
@@ -409,15 +442,19 @@ int main(int argc, char* argv[]){
     LOCALPORT = 6000;
     printf("I'm 6000\n");
     add_client("follower\0","127.0.0.1\0",5000,FALSE);
-    receive_UDP_packet();
+    add_client("follower\0","127.0.0.1\0",6000,FALSE);
+    //    receive_UDP();
   }
   else if(strcmp(argv[1],"6000"))
   {
     LOCALPORT = 5000;
     printf("I'm 5000\n");
+    add_client("leader\0","127.0.0.1\0",5000,TRUE);
     add_client("leader\0","127.0.0.1\0",6000,TRUE);
-    multicast_UDP(CHAT, "name", "hello");
+    //    multicast_UDP(CHAT, "name", "hello");
   }
+
+  create_message_threads();
 
 
 

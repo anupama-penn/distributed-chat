@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -31,6 +32,9 @@
 #define PACKETDELIM "\n"
 
 #define DEFAULTPORT 2886
+
+#define RECEIVE_THREADNUM 0
+#define SEND_THREADNUM 1
 
 enum bool
 {
@@ -169,7 +173,9 @@ packet_t* parsePacket(char*);
 
 chatmessage_t* find_chatmessage(char uid[]);
 
-void receive_UDP_packet();
+void *receive_UDP(void* t);
+void multicast_UDP(packettype_t packettype, char sender[], char messagebody[]);
+void *get_user_input(void* t);
 
 // incomplete
 // discover IP address using name
