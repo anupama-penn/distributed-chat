@@ -143,9 +143,9 @@ void *splashcurses(void *t)
   mvwaddwstr(splashwnd->window,18,1,L"  $$$$$$$$$$");
   mvwaddwstr(splashwnd->window,19,1,L"  $$$$  $$$$");
   mvwaddwstr(splashwnd->window,20,1,L"  $$$$$$$$$$");
-  mvwaddwstr(splashwnd->window,18,19,L" #1");
-  mvwaddwstr(splashwnd->window,19,19,L" #2");
-  mvwaddwstr(splashwnd->window,20,19,L" #3");
+  mvwaddwstr(splashwnd->window,18,22,L" #1");
+  mvwaddwstr(splashwnd->window,19,22,L" #2");
+  mvwaddwstr(splashwnd->window,20,22,L" #3");
   wattroff(splashwnd->window,COLOR_PAIR(4));
   wattron(splashwnd->window,COLOR_PAIR(1));
   mvwaddwstr(splashwnd->window,20,15,L"くコB彡");
@@ -155,9 +155,9 @@ void *splashcurses(void *t)
   mvwaddwstr(splashwnd->window,19,15,L"くコ:ミ");
   wattroff(splashwnd->window,COLOR_PAIR(2));
   wattron(splashwnd->window,COLOR_PAIR(3));
-  mvwaddwstr(splashwnd->window,18,23,L"Spencer Caplan");
-  mvwaddwstr(splashwnd->window,19,23,L"Jordan~ Kodner");
-  mvwaddwstr(splashwnd->window,20,23,L"Anupama Kumar~");
+  mvwaddwstr(splashwnd->window,18,27,L"Spencer Caplan");
+  mvwaddwstr(splashwnd->window,19,27,L"Jordan~ Kodner");
+  mvwaddwstr(splashwnd->window,20,27,L"Anupama Kumar~");
   wattroff(splashwnd->window,COLOR_PAIR(3));
   pthread_mutex_unlock(&disp_mutex);
   //sotong tank
@@ -203,26 +203,26 @@ void *splashcurses(void *t)
     wattron(splashwnd->window,COLOR_PAIR(2));
     mvwaddwstr(splashwnd->window,12,64,L"くコ:ミ");
     mvwaddwstr(splashwnd->window,13,48,L"くコ8ミ                 くコ:ミ");
-    mvwaddwstr(splashwnd->window,15,73,L"くコ8ミ");
-    mvwaddwstr(splashwnd->window,16,54,L"くコ8ミ");
-    mvwaddwstr(splashwnd->window,17,51,L"くコ:ミ                    くコBミ");
-    mvwaddwstr(splashwnd->window,18,74,L"くコB彡");
+    mvwaddwstr(splashwnd->window,15,75,L"くコ8ミ");
+    mvwaddwstr(splashwnd->window,16,56,L"くコ8ミ");
+    mvwaddwstr(splashwnd->window,17,49,L"くコ:ミ                    くコBミ");
+    mvwaddwstr(splashwnd->window,18,72,L"くコB彡");
     wattroff(splashwnd->window,COLOR_PAIR(2));
     wattron(splashwnd->window,COLOR_PAIR(1));
     mvwaddwstr(splashwnd->window,12,55,L"くコB彡");
     mvwaddwstr(splashwnd->window,13,64,L"くコ8彡");
     mvwaddwstr(splashwnd->window,14,79,L"くコ8彡");
-    mvwaddwstr(splashwnd->window,15,46,L"くコBミ        くコB彡");
-    mvwaddwstr(splashwnd->window,16,84,L"くコ:彡");
-    mvwaddwstr(splashwnd->window,17,69,L"くコ8彡");
+    mvwaddwstr(splashwnd->window,15,49,L"くコBミ      くコB彡");
+    mvwaddwstr(splashwnd->window,16,82,L"くコ:彡");
+    mvwaddwstr(splashwnd->window,17,67,L"くコ8彡");
     mvwaddwstr(splashwnd->window,18,81,L"くコ8ミ");
     wattroff(splashwnd->window,COLOR_PAIR(1));
 
   //How so Blur?
     wattron(splashwnd->window,COLOR_PAIR(3));
-    mvwaddwstr(splashwnd->window,12,76,L"How so Blur?");
+    mvwaddwstr(splashwnd->window,12,75,L"UnreliableChat");
     mvwaddwstr(splashwnd->window,14,61,L"How so Blur?");
-    mvwaddwstr(splashwnd->window,16,67,L"How so Blur?");
+    mvwaddwstr(splashwnd->window,16,66,L"UnreliableChat");
     mvwaddwstr(splashwnd->window,18,53,L"How so Blur?");
     wattroff(splashwnd->window,COLOR_PAIR(3));
     
@@ -264,9 +264,9 @@ void *splashcurses(void *t)
   //How so Blur?
     wattron(splashwnd->window,COLOR_PAIR(3));
     mvwaddwstr(splashwnd->window,12,76,L"How so Blur?");
-    mvwaddwstr(splashwnd->window,14,61,L"How so Blur?");
+    mvwaddwstr(splashwnd->window,14,60,L"UnreliableChat");
     mvwaddwstr(splashwnd->window,16,67,L"How so Blur?");
-    mvwaddwstr(splashwnd->window,18,53,L"How so Blur?");
+    mvwaddwstr(splashwnd->window,18,52,L"UnreliableChat");
     wattroff(splashwnd->window,COLOR_PAIR(3));
 
     wrefresh(splashwnd->window);
@@ -473,8 +473,12 @@ void setborder(window_t* wnd)
   }
   //  if(wnd)
   //  draw(wnd->hasfocus+48);
+
+  //  wborder(wnd->window, '│', ACS_VLINE, '-', '-', 'v', '>', '<', '^');
   wattron(wnd->window,COLOR_PAIR(color));
-  wborder(wnd->window, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
+  //  wborder(wnd->window, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
+  wborder(wnd->window, '#', '#', '#', '#', '#', '#', '#', '#');
+  //  box(wnd->window, 0, 0);
   wattroff(wnd->window,COLOR_PAIR(color));
   wrefresh(wnd->window);
   wattroff(wnd->window,A_BOLD);
@@ -554,10 +558,10 @@ void initui(int isdebug)
   setlocale(LC_ALL, "en_US.utf8");
   start_color();
 
-  init_pair(11, COLOR_BLACK, COLOR_CYAN);
-  init_pair(12, COLOR_BLACK, COLOR_YELLOW);
-  init_pair(13, COLOR_BLACK, COLOR_BLUE);
-  init_pair(10, COLOR_BLACK, COLOR_WHITE);
+  init_pair(11, COLOR_CYAN, COLOR_BLACK);
+  init_pair(12, COLOR_YELLOW, COLOR_BLACK);
+  init_pair(13, COLOR_BLUE, COLOR_BLACK);
+  init_pair(10, COLOR_WHITE, COLOR_BLACK);
 
   cbreak();
   noecho();
