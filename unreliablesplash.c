@@ -432,7 +432,20 @@ void print_msgs()
     curr=curr->prev;
   }
   pthread_mutex_lock(&disp_mutex);
+  if(MSGS->tail != LAST_MSG_NODE)
+  {
+    mvwaddstr(msgwnd->window,msgwnd->nrows-2,1," V V V V ");
+    wattron(msgwnd->window,COLOR_PAIR(2));    
+    wattron(msgwnd->window,A_BOLD);
+    mvwaddstr(msgwnd->window,msgwnd->nrows-2,9," MORE MESSAGES BELOW ");
+    wattroff(msgwnd->window,A_BOLD);
+    wattroff(msgwnd->window,COLOR_PAIR(2));    
+    int i = 0;
+    for(i = 30; i < msgwnd->ncols-1; i+=2)
+      mvwaddch(msgwnd->window,msgwnd->nrows-2,i,'V');
+  }
   wrefresh(msgwnd->window);
+  wrefresh(inputwnd->window);
   pthread_mutex_unlock(&disp_mutex);
 }
 
@@ -695,7 +708,6 @@ void initui(int isdebug)
 	draw((char)d);
       else if(focuswnd == msgwnd)
       {
-	wprintw(infownd->window," %d\n",d);
 	if(d == KEY_UP)
 	{
 	  if(LAST_MSG_NODE != MSGS->head)
@@ -704,13 +716,23 @@ void initui(int isdebug)
 	    print_msgs();
 	  }
 	}
-	if(d == KEY_DOWN)
+	else if(d == KEY_DOWN)
 	{
 	  if(LAST_MSG_NODE != MSGS->tail)
 	  {
 	    LAST_MSG_NODE = LAST_MSG_NODE->next;
 	    print_msgs();
 	  }
+	}
+	else if(d == KEY_LEFT)
+	{
+	  LAST_MSG_NODE = MSGS->head;
+	  print_msgs();
+	}
+	else if(d == KEY_RIGHT)
+	{
+	  LAST_MSG_NODE = MSGS->tail;
+	  print_msgs();
 	}
       }
     }
