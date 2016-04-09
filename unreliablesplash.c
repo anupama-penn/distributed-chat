@@ -47,6 +47,7 @@ llist_t* MSGS;
 llist_t* INFOS;
 
 node_t* LAST_MSG_NODE;
+node_t* LAST_INFO_NODE;
 
 char MY_MSG[1024];
 int MY_MSG_INDEX;
@@ -250,7 +251,7 @@ void *splashcurses(void *t)
 
 
 
-void add_msg(char* user, char message[])
+void add_msg(char* user, char message[], llist_t* msglist)
 {
   int maxline = msgwnd->ncols/2-2;
   int numlines = strlen(message)/maxline;
@@ -284,18 +285,18 @@ void add_msg(char* user, char message[])
     maxwidth = strlen(message);
   }
 
-  if(MSGS->tail != NULL && strcmp(((uimessage_t*)MSGS->tail->elem)->username,user) == 0)
+  if(msglist->tail != NULL && strcmp(((uimessage_t*)msglist->tail->elem)->username,user) == 0)
   {
-    char* prevmsg = ((uimessage_t*)MSGS->tail->elem)->message;
+    char* prevmsg = ((uimessage_t*)msglist->tail->elem)->message;
     char* combinedmsg = (char*)malloc(sizeof(char)*(strlen(msglines)+strlen(prevmsg)+1));
     strcpy(combinedmsg,prevmsg);
     strcat(combinedmsg,msglines);
     free(prevmsg);
     prevmsg = NULL;
-    ((uimessage_t*)MSGS->tail->elem)->message = combinedmsg;
-    ((uimessage_t*)MSGS->tail->elem)->numlines += numlines;
-    if(maxwidth > ((uimessage_t*)MSGS->tail->elem)->maxwidth)
-      ((uimessage_t*)MSGS->tail->elem)->maxwidth = maxwidth;
+    ((uimessage_t*)msglist->tail->elem)->message = combinedmsg;
+    ((uimessage_t*)msglist->tail->elem)->numlines += numlines;
+    if(maxwidth > ((uimessage_t*)msglist->tail->elem)->maxwidth)
+      ((uimessage_t*)msglist->tail->elem)->maxwidth = maxwidth;
   }
   else
   {
@@ -305,10 +306,7 @@ void add_msg(char* user, char message[])
     newmessage->message = msglines;
     newmessage->numlines = numlines;
     newmessage->maxwidth = maxwidth;
-    int end = LAST_MSG_NODE == MSGS->tail;
-    node_t* newtail = add_elem(MSGS, (void*)newmessage);
-    if(end)
-      LAST_MSG_NODE = newtail;
+    return add_elem(msglist, (void*)newmessage);
   }
 
 }
@@ -449,10 +447,119 @@ void print_msgs()
   pthread_mutex_unlock(&disp_mutex);
 }
 
+void print_infos()
+{
+  int linenum = infownd->nrows-3;
+
+  node_t* curr = LAST_INFO_NODE;
+  pthread_mutex_lock(&disp_mutex);
+  wclear(infownd->window);
+  pthread_mutex_unlock(&disp_mutex);
+  setborder(infownd);
+  if(focuswnd == inputwnd)
+  setborder(inputwnd);
+  while(curr != NULL)
+  {
+    uimessage_t* uimsg = (uimessage_t*)(curr->elem);
+    int namestart = 2;
+    int start = namestart+1+strlen(uimsg->username);
+    int color = 1;
+
+    pthread_mutex_lock(&disp_mutex);
+    int i = 0;
+    char currchar = ' ';
+    linenum-=uimsg->numlines;
+    msgwnd->r = linenum;
+    msgwnd->c = start;
+    currchar = uimsg->message[i];
+    while(currchar != '\0')
+    {     
+      if(currchar == '\n')
+      {
+	linenum++;
+	infownd->r = linenum;
+	infownd->c = start;
+	i++;
+	currchar = uimsg->message[i];
+	continue;
+      }
+      if(linenum > 0)
+	mvwaddch(infownd->window,infownd->r,infownd->c,currchar);
+      infownd->c++;
+      i++;
+      currchar = uimsg->message[i];
+    }
+    linenum-=uimsg->numlines;
+    //    pthread_mutex_unlock(&disp_mutex);
+    //    linenum--;
+    //    pthread_mutex_lock(&disp_mutex);
+    wattron(infownd->window,COLOR_PAIR(color));    
+    wattron(infownd->window,A_BOLD);
+      mvwaddstr(infownd->window,linenum, namestart, uimsg->username);
+    wattroff(infownd->window,A_BOLD);
+    if(linenum <= 0)
+    {
+      wattroff(infownd->window,COLOR_PAIR(color));    
+      pthread_mutex_unlock(&disp_mutex);
+      break;
+    }
+    linenum--;
+    wattroff(infownd->window,COLOR_PAIR(color));    
+    pthread_mutex_unlock(&disp_mutex);
+    curr=curr->prev;
+  }
+  pthread_mutex_lock(&disp_mutex);
+  if(INFOS->tail != LAST_INFO_NODE)
+  {
+    mvwaddstr(infownd->window,infownd->nrows-2,1," V V V V ");
+    wattron(infownd->window,COLOR_PAIR(2));    
+    wattron(infownd->window,A_BOLD);
+    mvwaddstr(infownd->window,infownd->nrows-2,9," MORE MESSAGES BELOW ");
+    wattroff(infownd->window,A_BOLD);
+    wattroff(infownd->window,COLOR_PAIR(2));    
+    int i = 0;
+    for(i = 30; i < infownd->ncols-1; i+=2)
+      mvwaddch(infownd->window,infownd->nrows-2,i,'V');
+  }
+  wrefresh(infownd->window);
+  wrefresh(inputwnd->window);
+  pthread_mutex_unlock(&disp_mutex);
+}
+
 void print_msg(char* user, char message[])
 {
-  add_msg(user,message);
-  print_msgs();
+  add_msg(user,message,MSGS);
+  node_t* newtail = print_msgs();
+  int end = LAST_MSG_NODE == msglist->tail;
+    else
+      end = LAST_INFO_NODE == msglist->tail;
+    node_t* newtail = add_elem(msglist, (void*)newmessage);
+    if(end && msglist == MSGS)
+      LAST_MSG_NODE = newtail;
+    else if(end)
+    LAST_INFO_NODE = newtail;
+    
+
+}
+
+void print_info(char* user, char message[])
+{
+  add_msg(user,message,INFOS);
+  print_infos();
+}
+
+void *spoof_updates(void *t)
+{
+  while(1)
+  {
+    print_info("Alice","has joined the chat");
+    sleep(5);
+    print_info("Alice","has left the chat");
+    sleep(10);
+    print_info("Bob","is Bob.");
+    sleep(10);
+  }
+  pthread_exit((void *)t);
 }
 
 void *spoof_chats(void *t)
@@ -634,8 +741,11 @@ void initui(int isdebug)
   //  MY_MSG = (char*)malloc(sizeof(char));
   MY_MSG_INDEX = 0;
   MSGS = (llist_t*)malloc(sizeof(llist_t));
+  INFOS = (llist_t*)malloc(sizeof(llist_t));
   init_list(MSGS);
+  init_list(INFOS);
   LAST_MSG_NODE = MSGS->tail;
+  LAST_INFO_NODE = INFOS->tail;
 
   //  splash();
   mainwnd = initscr();
@@ -681,7 +791,7 @@ void initui(int isdebug)
 
   //  splashcurses();
 
-  pthread_t threads[2];
+  pthread_t threads[3];
   pthread_attr_t attr;
   void *exitstatus;
 
@@ -691,6 +801,7 @@ void initui(int isdebug)
 
   pthread_create(&threads[SYSCALL_THREADNUM], &attr, spoof_chats, (void *)SYSCALL_THREADNUM);
   pthread_create(&threads[1], &attr, splashcurses, (void *)1);
+  pthread_create(&threads[2], &attr, spoof_updates, (void *)2);
 
   //  pthread_join(threads[SYSCALL_THREADNUM], &exitstatus);
 

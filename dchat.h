@@ -1,3 +1,4 @@
+#pragma once
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
@@ -21,6 +22,9 @@
 #define INITIAL_CLIENT_COUNT 8
 #define MSGBUFSIZE 256
 
+#define RECEIVE_THREADNUM 0
+#define SEND_THREADNUM 1
+
 #define MAXIPLEN 32
 #define MAXSENDERLEN 64
 #define MAXUIDLEN 128
@@ -33,9 +37,6 @@
 
 #define DEFAULTPORT 2886
 
-#define RECEIVE_THREADNUM 0
-#define SEND_THREADNUM 1
-
 enum bool
 {
   FALSE=0,
@@ -43,16 +44,17 @@ enum bool
 };
 typedef enum bool bool_t;
 
-/*typedef enum bool
-{
-  FALSE=0,
-  TRUE=1
-  } bool_t;*/
-//
-//Message types
 enum packettype { CHAT = 0, SEQUENCE = 1, CHECKUP = 2, ELECTION = 3, VOTE = 4, VICTORY = 5, JOIN_REQUEST = 6, LEADER_INFO = 7, JOIN = 8};
 typedef enum packettype packettype_t;
-//
+
+typedef struct packet_t {
+  char sender[MAXSENDERLEN];
+  char uid[MAXUIDLEN];
+  packettype_t packettype;
+  int packetnum;
+  int totalpackets;
+  char packetbody[MAXPACKETBODYLEN];
+} packet_t;
 
 // Function Declarations
 //void print(clist *); // print client list
@@ -69,21 +71,11 @@ void holdElection();
 //cname userdata;
 //static char buf[1024];
 
-static int LOCALPORT = DEFAULTPORT;
 static llist_t* UNSEQ_CHAT_MSGS;
 static llist_t* CLIENTS;
 static queue_t* HBACK_Q; 
 
-bool_t INITIALIZED = FALSE;
-
-typedef struct packet_t {
-  char sender[MAXSENDERLEN];
-  char uid[MAXUIDLEN];
-  packettype_t packettype;
-  int packetnum;
-  int totalpackets;
-  char packetbody[MAXPACKETBODYLEN];
-} packet_t;
+static bool_t INITIALIZED = FALSE;
 
 typedef struct chatmessage_t {
   int seqnum;
@@ -168,18 +160,11 @@ bool_t append_to_chatmessage(chatmessage_t*, packet_t*);
 // comparing sequence number of messages to print it acc to total ordering
 //int message_compare(const void* varname, const void*);
 
-// chack if input is of-> enum msg_type_t;TEXT = 0, NEWUSER = 1, USEREXIT = 2, ELECTION = 3};
 packet_t* parsePacket(char*);
 
 chatmessage_t* find_chatmessage(char uid[]);
 
-void *receive_UDP(void* t);
-void multicast_UDP(packettype_t packettype, char sender[], char messagebody[]);
 void *get_user_input(void* t);
-
-// incomplete
-// discover IP address using name
-void getLocalIp(char*);
 
 void print_client_list();
 
