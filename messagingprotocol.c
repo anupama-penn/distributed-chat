@@ -102,6 +102,7 @@ void *receive_UDP(void* t)
 	  {
 	    SEQ_NO = firstmessage->seqnum + 1;
 	    printf("\E[34m%s\E(B\E[m (sequenced: %d):\t%s\n", firstmessage->sender, firstmessage->seqnum,firstmessage->messagebody);
+	    q_dequeue(HBACK_Q);
 	  }
 
 	  //check if the front of the queue corresponds to our expected current sequence no. If so, print it. If not, we should wait or eventually ping the leader for it.

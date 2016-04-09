@@ -51,7 +51,7 @@ void q_enqueue(queue_t *q, void *msg) {
     q->messages[q->num_elements] = (void*) msg;
     int idx = q->num_elements;
     void *temp = NULL;
-    while(idx > 0 && q->cmp(q->messages[idx], q->messages[getParent(idx)]) > 0) {
+    while(idx > 0 && q->cmp(q->messages[idx], q->messages[getParent(idx)]) < 0) {
         temp = q->messages[idx];
         q->messages[idx] = q->messages[getParent(idx)];
         q->messages[getParent(idx)] = temp;
