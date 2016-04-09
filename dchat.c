@@ -179,6 +179,25 @@ void *receive_UDP(void* t)
 	  break;
 	case JOIN_REQUEST:
 	  //message from someone who wants to join
+	 client_t* sendtoclient = (client_t*)malloc(sizeof(client_t));
+            
+            // declare hostname_add and portnum_add to be respectively those provided in the arguments
+            node_t* curr = CLIENTS->head;
+            while(curr != NULL)
+            {
+                sendtoclient = ((client_t*)curr->elem);
+                if(strcmp(portnum != sendtoclient->portnum)
+                {
+                    strcpy(sendtoclient->username,username);
+                    
+                    strcpy(sendtoclient->hostname,hostname);
+                    sendtoclient->portnum = portnum;
+                    
+                    sendtoclient->isleader = FALSE;
+                    add_elem(UNSEQ_CHAT_MSGS,(void*)sendtoclient);
+                }
+                curr = curr->next;
+            }
 
 	  break;
 	case LEADER_INFO:
