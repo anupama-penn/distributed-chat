@@ -69,6 +69,7 @@ chatmessage_t* find_chatmessage(char uid[])
   node_t* curr = UNSEQ_CHAT_MSGS->head;
   while(curr != NULL)
   {
+    printf("SEQUENCE uid:%s\tMESSAGE uid:%s\n",uid,((chatmessage_t*)curr->elem)->uid);
     if(strcmp(uid, ((chatmessage_t*)curr->elem)->uid) == 0)
       return ((chatmessage_t*)curr->elem);
     curr = curr->next;

@@ -14,6 +14,7 @@ bool_t initialize_data_structures() {
     
   init_list(CLIENTS);
   init_list(UNSEQ_CHAT_MSGS);
+  HBACK_Q = init(message_compare,100);
 
   //  INITIALIZED = TRUE;
   //  return INITIALIZED;
@@ -56,14 +57,26 @@ n
 void *get_user_input(void* t)
 {
   char userinput[MAXCHATMESSAGELEN];
+  int counter = 0;
+  int i = 0;
   while(1)
   {
-    scanf("%s",userinput);
+    fgets(userinput, sizeof(userinput), stdin);
+    if(userinput[0] == '\n')
+      continue;
+    for(i = 0; i < strlen(userinput); i++)
+    {
+      if(userinput[i]=='\n')
+	userinput[i] = ' ';
+    }
+    //    scanf("%s",userinput);
+    //    usleep(10000);
     char* sendstr = strdup(userinput);
     int timestamp = (int)time(NULL);
     char uid[MAXUIDLEN];
-    sprintf(uid,"%d",timestamp);
-    multicast_UDP(CHAT,"myname", uid, sendstr);
+    sprintf(uid,"%d^_^%d",timestamp,counter);
+    counter++;
+    multicast_UDP(CHAT,me->username, uid, sendstr);
     free(sendstr);
   }
   pthread_exit((void *)t);
@@ -92,7 +105,6 @@ int main(int argc, char* argv[]){
     
   UNSEQ_CHAT_MSGS = (llist_t*) malloc(sizeof(llist_t));
   CLIENTS = (llist_t*) malloc(sizeof(llist_t));
-  HBACK_Q = init(message_compare,100);
   initialize_data_structures();
 
   printf("I'm awake.\n");

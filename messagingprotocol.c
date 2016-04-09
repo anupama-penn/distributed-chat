@@ -48,6 +48,8 @@ void *receive_UDP(void* t)
         
         nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &addr,&addrlen);
         
+	//	printf("RECEIVED: %s\n",buf);
+
         if (nbytes <0) {
             perror("recvfrom");
             exit(1);
@@ -77,17 +79,14 @@ void *receive_UDP(void* t)
 
 	  //for now, just print if it's complete
 	  if(completed)
-	    printf("\E[34m%s\E(B\E[m (not sequenced):\t%s\n", message->sender, message->messagebody);
+	    printf("\E[33m%s\E(B\E[m (not sequenced):\t%s\n", message->sender, message->messagebody);
 
 	  //if am the leader, prep and send a sequencing message for this chatmessage
 	  if(me->isleader)
 	  {
 	    char seqnum[5];
 	    sprintf(seqnum,"%d",LEADER_SEQ_NO);
-	    int timestamp = (int)time(NULL);
-	    char uid[MAXUIDLEN];
-	    sprintf(uid,"%d",timestamp);
-	    multicast_UDP(SEQUENCE,me->username,uid,seqnum);
+	    multicast_UDP(SEQUENCE,me->username,message->uid,seqnum);
 	    LEADER_SEQ_NO++;
 	  }
 	  break;
@@ -96,6 +95,7 @@ void *receive_UDP(void* t)
 	  message = find_chatmessage(newpacket->uid);
 	  //If the corresponding message is not complete, ask the leader for its missing part first. It will be received as a chat. TODO
 	  message->seqnum = atoi(newpacket->packetbody);
+	  remove_elem(UNSEQ_CHAT_MSGS,(void*)message);
 	  q_enqueue(HBACK_Q,(void*)message);
 	  chatmessage_t* firstmessage = (chatmessage_t*)q_peek(HBACK_Q);
 	  if(firstmessage->seqnum <= SEQ_NO)

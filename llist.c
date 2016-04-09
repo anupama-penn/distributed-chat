@@ -33,6 +33,22 @@ node_t* add_elem(llist_t* list, void* elem)
   return node;
 }
 
+void* remove_elem(struct llist_t* list, void* elem)
+{
+  node_t* curr = list->head;
+  int index = 0;
+  while(curr != NULL)
+  {
+    if(curr->elem == elem)
+    {
+      return remove_node(list,curr);
+    }
+    index++;
+    curr = curr->next;
+  }
+  return NULL;
+}
+
 void* remove_node(llist_t* list, struct node_t* condemned)
 {
   void* contents = condemned->elem;
