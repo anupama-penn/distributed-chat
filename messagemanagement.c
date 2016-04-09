@@ -1,6 +1,6 @@
 #include "messagemanagement.h"
 
-bool_t check_chatmessage_completeness(chatmessage_t* message)
+bool check_chatmessage_completeness(chatmessage_t* message)
 {
   int max = message->numpacketsexpected;
   int i;
@@ -39,7 +39,7 @@ chatmessage_t* create_chatmessage(packet_t* newpacket)
 
 //add this CHAT packet's contents to the appropriate chat message
 //returns whether or not this message is now complete
-bool_t append_to_chatmessage(chatmessage_t* message, packet_t* newpacket)
+bool append_to_chatmessage(chatmessage_t* message, packet_t* newpacket)
 {
   message->packetsreceived[newpacket->packetnum] = TRUE;
 

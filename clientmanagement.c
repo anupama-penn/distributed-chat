@@ -20,7 +20,7 @@ void print_client_list() {
 }
 
 
-client_t* add_client(char username[], char hostname[], int portnum, bool_t isleader)
+client_t* add_client(char username[], char hostname[], int portnum, bool isleader)
 {
   client_t* newclient = (client_t*)malloc(sizeof(client_t));
   strcpy(newclient->username,username);
@@ -28,7 +28,11 @@ client_t* add_client(char username[], char hostname[], int portnum, bool_t islea
   newclient->portnum = portnum;
   newclient->isleader = isleader;
   if(portnum==LOCALPORT && strcmp(hostname,LOCALHOSTNAME) == 0)
+  {
     me = newclient;
+    uihostname = me->hostname;
+    uiport = me->portnum;
+  }
   add_elem(CLIENTS,(void*)newclient);
   return newclient;
 }
@@ -37,7 +41,7 @@ void remove_client(char hostname[], int portnum)
 {
   client_t* client;
   node_t* curr = CLIENTS->head;
-  bool_t found = FALSE;
+  bool found = FALSE;
   while(curr != NULL)
   {
     client = ((client_t*)curr->elem);
@@ -54,6 +58,20 @@ void remove_client(char hostname[], int portnum)
   }
   free(client);
   client = NULL;
+}
+
+client_t* find_first_client_by_username(char username[])
+{
+  client_t* client;
+  node_t* curr = CLIENTS->head;
+  while(curr != NULL)
+  {
+    client = ((client_t*)curr->elem);
+    if(strcmp(username,client->username) == 0)
+      return client;
+    curr = curr->next;
+  }
+  return NULL;
 }
 
 void holdElection() {

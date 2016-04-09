@@ -10,7 +10,7 @@ void error(char *x){
 
 // add some way to check if client is alive
 
-bool_t initialize_data_structures() {
+bool initialize_data_structures() {
     
   init_list(CLIENTS);
   init_list(UNSEQ_CHAT_MSGS);
@@ -54,30 +54,41 @@ n
 
 */
 
+void send_chat_message(int counter, char userinput[])
+{
+   char* sendstr = strdup(userinput);
+   int timestamp = (int)time(NULL);
+   char uid[MAXUIDLEN];
+   sprintf(uid,"%d^_^%d",timestamp,counter);
+   multicast_UDP(CHAT,me->username, uid, sendstr);
+   free(sendstr);
+}
+
 void *get_user_input(void* t)
 {
   char userinput[MAXCHATMESSAGELEN];
   int counter = 0;
   int i = 0;
-  while(1)
+
+  if(UIRUNNING)
+    initui(0);
+  else
   {
-    fgets(userinput, sizeof(userinput), stdin);
-    if(userinput[0] == '\n')
-      continue;
-    for(i = 0; i < strlen(userinput); i++)
+    while(1)
     {
-      if(userinput[i]=='\n')
-	userinput[i] = ' ';
+      fgets(userinput, sizeof(userinput), stdin);
+      if(userinput[0] == '\n')
+	continue;
+      for(i = 0; i < strlen(userinput); i++)
+      {
+	if(userinput[i]=='\n')
+	  userinput[i] = ' ';
+      }
+      //    scanf("%s",userinput);
+      //    usleep(10000);
+      counter++;
+      send_chat_message(counter, userinput);
     }
-    //    scanf("%s",userinput);
-    //    usleep(10000);
-    char* sendstr = strdup(userinput);
-    int timestamp = (int)time(NULL);
-    char uid[MAXUIDLEN];
-    sprintf(uid,"%d^_^%d",timestamp,counter);
-    counter++;
-    multicast_UDP(CHAT,me->username, uid, sendstr);
-    free(sendstr);
   }
   pthread_exit((void *)t);
 }
@@ -108,6 +119,7 @@ int main(int argc, char* argv[]){
   initialize_data_structures();
 
   printf("I'm awake.\n");
+  UIRUNNING = 0;
 
   if(strcmp(argv[1],"5000"))
   {

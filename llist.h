@@ -1,3 +1,4 @@
+#pragma once
 #include <stdlib.h>
 
 typedef struct node_t //for use in llist_t

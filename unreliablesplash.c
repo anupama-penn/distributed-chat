@@ -1,75 +1,4 @@
-#define _XOPEN_SOURCE_EXTENDED 1
-
-//gcc -pthread unreliablesplash.c llist.c -lncursesw && a.out
-
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <ncursesw/curses.h>
-#include <locale.h>
-#include <wchar.h>
-
-#include "llist.h"
-
-#define SYSCALL_THREADNUM 0
-
-typedef struct uimessage_t
-{
-  char* username;
-  int userid;
-  char* message;
-  int numlines;
-  int maxwidth;
-} uimessage_t;
-
-typedef struct window_t
-{
-  WINDOW* window;
-  int r;
-  int c;
-  int nrows;
-  int ncols;
-  int hasfocus;
-} window_t;
-
-typedef struct user_t
-{
-  int usernum;
-  char* username;
-} user_t;
-
-pthread_mutex_t disp_mutex;
-
-llist_t* MSGS;
-llist_t* INFOS;
-
-node_t* LAST_MSG_NODE;
-node_t* LAST_INFO_NODE;
-
-int showhelp;
-
-char MY_MSG[1024];
-int MY_MSG_INDEX;
-
-int useruid = 0;
-
-int r;
-int c;
-int nrows;
-int ncols;
-WINDOW* mainwnd;
-window_t* splashwnd;
-window_t* inputwnd;
-window_t* infownd;
-window_t* msgwnd;
-
-window_t* focuswnd;
-
-window_t* focusable_wnds[3];
-int focusindex;
+#include "unreliablesplash.h"
 
 void splash()
 {
@@ -252,8 +181,7 @@ void *splashcurses(void *t)
 }
 
 
-
-uimessage_t* add_msg(char* user, char message[], llist_t* msglist, int append)
+uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist, int append, char hostname[], int portnum)
 {
   int maxline = msgwnd->ncols/2-2;
   int numlines = strlen(message)/maxline;
@@ -261,8 +189,6 @@ uimessage_t* add_msg(char* user, char message[], llist_t* msglist, int append)
     numlines++;
   char* msglines = (char*)malloc(sizeof(char)*numlines*maxline+numlines);
   int lo = 0;
-  int hi = 0+maxline;
-  int index = 0;
   int maxwidth = 0;
   if(strlen(message) > maxline)
   {
@@ -287,7 +213,7 @@ uimessage_t* add_msg(char* user, char message[], llist_t* msglist, int append)
     maxwidth = strlen(message);
   }
 
-  if(msglist->tail != NULL && strcmp(((uimessage_t*)msglist->tail->elem)->username,user) == 0 && append)
+  if(msglist->tail != NULL && strcmp(((uimessage_t*)msglist->tail->elem)->hostname,hostname) == 0 && ((uimessage_t*)msglist->tail->elem)->portnum == portnum && append)
   {
     char* prevmsg = ((uimessage_t*)msglist->tail->elem)->message;
     char* combinedmsg = (char*)malloc(sizeof(char)*(strlen(msglines)+strlen(prevmsg)+1));
@@ -304,14 +230,23 @@ uimessage_t* add_msg(char* user, char message[], llist_t* msglist, int append)
   else
   {
     uimessage_t* newmessage = (uimessage_t*)malloc(sizeof(uimessage_t));
+    char* msghostname = (char*)malloc(sizeof(char));
     newmessage->username = user;
-    newmessage->userid = 1;
+    //    newmessage->userid = 1;
     newmessage->message = msglines;
     newmessage->numlines = numlines;
     newmessage->maxwidth = maxwidth;
+    strcpy(msghostname,hostname);
+    newmessage->hostname = msghostname;
+    newmessage->portnum = portnum;
     return newmessage;
   }
 
+}
+
+uimessage_t* add_msg(char* user, char message[], llist_t* msglist, int append)
+{
+  return add_msg_with_senderids(user, message, msglist, append, "", -1);
 }
 
 void print_msgs()
@@ -330,7 +265,8 @@ void print_msgs()
     int namestart = start-6;
     int color = 1;
     //    int namestart = 4;
-    if(strcmp("Me", uimsg->username) == 0)
+    if(strcmp(uimsg->hostname,uihostname) == 0 && uimsg->portnum == uiport)
+    //    if(strcmp("Me", uimsg->username) == 0)
     {
       //      if(curr == MSGS->tail)
       //      {
@@ -620,7 +556,17 @@ void print_infos()
 
 void print_msg(char* user, char message[])
 {
-  uimessage_t* newmessage = add_msg(user,message,MSGS,1);
+  print_msg_with_senderids(user,message,"",-1);
+}
+
+void print_msg_with_senderids(char* user, char message[], char hostname[], int portnum)
+{
+  if(!UIRUNNING)
+  {
+    printf("%s:\t%s\n",user,message);
+    return;
+  }
+  uimessage_t* newmessage = add_msg_with_senderids(user,message,MSGS,1,hostname,portnum);
   if(newmessage)
   {
     int end = LAST_MSG_NODE == MSGS->tail;
@@ -675,7 +621,7 @@ void *spoof_chats(void *t)
 }
 
 
-void draw(char dc)
+int draw(char dc)
 {
   wmove(focuswnd->window,focuswnd->r,focuswnd->c);
   if(dc == '\n')
@@ -683,11 +629,7 @@ void draw(char dc)
     //    wprintw(msgwnd->window,"\n\n   ");
     //    wprintw(msgwnd->window,MY_MSG);
     //    wrefresh(msgwnd->window);
-    print_msg("Me", MY_MSG);
-    refresh_wnd(focuswnd);
-    memset(MY_MSG,0, 1024);
-    MY_MSG_INDEX = 0;
-    return;
+    return 1;
   }
   if(dc == 127)
   {
@@ -713,11 +655,11 @@ void draw(char dc)
       MY_MSG_INDEX--;
     MY_MSG[MY_MSG_INDEX] = '\0';
 
-    return;
+    return 0;
   }
 
   if(focuswnd->c == focuswnd->ncols-2 && focuswnd->r == focuswnd->nrows-2)
-    return;
+    return 0;
 
   pthread_mutex_lock(&disp_mutex);
   wdelch(focuswnd->window);
@@ -739,6 +681,7 @@ void draw(char dc)
       focuswnd->r = 2;
   }
   wmove(focuswnd->window,focuswnd->r,focuswnd->c);
+  return 0;
 }
 
 
@@ -890,19 +833,20 @@ void initui(int isdebug)
 
   pthread_t threads[3];
   pthread_attr_t attr;
-  void *exitstatus;
+  //  void *exitstatus;
 
   //make sure threads are joinable
   pthread_attr_init(&attr);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
-  pthread_create(&threads[SYSCALL_THREADNUM], &attr, spoof_chats, (void *)SYSCALL_THREADNUM);
+  //  pthread_create(&threads[SYSCALL_THREADNUM], &attr, spoof_chats, (void *)SYSCALL_THREADNUM);
   pthread_create(&threads[1], &attr, splashcurses, (void *)1);
   pthread_create(&threads[2], &attr, spoof_updates, (void *)2);
 
   //  pthread_join(threads[SYSCALL_THREADNUM], &exitstatus);
 
 
+  int counter = 0;
   while(1)
   {
     d = wgetch(focuswnd->window);
@@ -913,7 +857,17 @@ void initui(int isdebug)
     else
     {
       if(focuswnd == inputwnd)
-	draw((char)d);
+      {
+	int done = draw((char)d);
+	if(done)
+	{
+	  send_chat_message(counter,MY_MSG);
+	  //	  print_msg("Me", MY_MSG);
+	  refresh_wnd(focuswnd);
+	  memset(MY_MSG,0, 1024);
+	  MY_MSG_INDEX = 0;
+	}
+      }
       else if(focuswnd == msgwnd)
       {
 	if(d == KEY_UP)
@@ -986,12 +940,13 @@ void initui(int isdebug)
   
 }
 
-int main(int argc, char** argv)
+/*int main(int argc, char** argv)
 {
   int i = 0;
 
   char d;
 
+  UIRUNNING = 1;
   initui(0);
 
   //  del_wnd(splashwnd);
@@ -1030,3 +985,4 @@ int main(int argc, char** argv)
 
   return 0;
 }
+*/

@@ -14,9 +14,12 @@
 #include <signal.h>
 #include <stdint.h>
 #include <time.h>
+#include <ncursesw/curses.h>
 
 #include "queue.h"
 #include "llist.h"
+#include "send_msg.h"
+#include "unreliablesplash.h"
 
 #define QUEUE_SIZE 128
 #define INITIAL_CLIENT_COUNT 8
@@ -37,12 +40,12 @@
 
 #define DEFAULTPORT 2886
 
-enum bool
+/*enum bool_t
 {
   FALSE=0,
   TRUE=1
 };
-typedef enum bool bool_t;
+typedef enum bool_t bool_t;*/
 
 enum packettype { CHAT = 0, SEQUENCE = 1, CHECKUP = 2, ELECTION = 3, VOTE = 4, VICTORY = 5, JOIN_REQUEST = 6, LEADER_INFO = 7, JOIN = 8};
 typedef enum packettype packettype_t;
@@ -59,8 +62,8 @@ typedef struct packet_t {
 typedef struct chatmessage_t {
   int seqnum;
   int numpacketsexpected;
-  bool_t iscomplete;
-  bool_t packetsreceived[MESSAGEMULTIPLIER];//indicates which packets have been received
+  bool iscomplete;
+  bool packetsreceived[MESSAGEMULTIPLIER];//indicates which packets have been received
   char sender[MAXSENDERLEN];
   char uid[MAXUIDLEN];
   char messagebody[MAXCHATMESSAGELEN];
@@ -70,7 +73,7 @@ typedef struct client_t {
   char username[MAXSENDERLEN];
   char hostname[MAXIPLEN];
   int portnum;
-  bool_t isleader; 
+  bool isleader; 
 } client_t;
 
 
@@ -95,7 +98,7 @@ int SEQ_NO;
 int LEADER_SEQ_NO; 
 
 //int LOCALPORT = DEFAULTPORT;
-//static bool_t INITIALIZED = FALSE;
+//static bool INITIALIZED = FALSE;
 
 // Function Declarations
 
@@ -107,7 +110,8 @@ void *get_user_input(void* t);
 void holdElection();
 
 // add some way to check if client is alive
-bool_t initialize_data_structures();
+
+bool initialize_data_structures();
 
 //void destroy_data_structures();
 
@@ -116,3 +120,4 @@ bool_t initialize_data_structures();
 
 //void shutdown();
 
+//UI functions

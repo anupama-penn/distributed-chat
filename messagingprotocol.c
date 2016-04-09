@@ -57,7 +57,7 @@ void *receive_UDP(void* t)
 
 	packet_t* newpacket = parsePacket(buf);
 	chatmessage_t* message;
-	bool_t completed = FALSE;
+	bool completed = FALSE;
 	
 	//figure out what type of packet this is and act accordingly
 	switch(newpacket->packettype)
@@ -102,6 +102,16 @@ void *receive_UDP(void* t)
 	  {
 	    SEQ_NO = firstmessage->seqnum + 1;
 	    printf("\E[34m%s\E(B\E[m (sequenced: %d):\t%s\n", firstmessage->sender, firstmessage->seqnum,firstmessage->messagebody);
+	    client_t* firstclientmatchbyname = find_first_client_by_username(firstmessage->sender);
+	    char* hostname = "";
+
+	    int portnum = -1;
+	    if(firstclientmatchbyname != NULL)
+	    {
+	      hostname = firstclientmatchbyname->hostname;
+	      portnum = firstclientmatchbyname->portnum;
+	    }
+	    print_msg_with_senderids(firstmessage->sender,firstmessage->messagebody, hostname, portnum);
 	    q_dequeue(HBACK_Q);
 	  }
 
@@ -184,16 +194,62 @@ void getLocalIp(char *buf){
     
     // connect?
     
-    struct sockaddr_in sockname;
-    socklen_t socknamelen = sizeof(sockname);
-    int err = getsockname(sock, (struct sockaddr*) &sockname, &socknamelen);
+    //    struct sockaddr_in sockname;
+    //    socklen_t socknamelen = sizeof(sockname);
+    //    int err = getsockname(sock, (struct sockaddr*) &sockname, &socknamelen);
 
 
-    const char* p = inet_ntop(AF_INET, &sockname.sin_addr, buf, INET_ADDRSTRLEN);
+    //    const char* p = inet_ntop(AF_INET, &sockname.sin_addr, buf, INET_ADDRSTRLEN);
     close(sock);
     return;
 }
 
+void send_UDP(packettype_t packettype, char sender[], char uid[], char messagebody[], client_t* sendtoclient)
+{
+    
+  char packetbodybuf[MAXPACKETBODYLEN];
+  char packetbuf[MAXPACKETLEN];
+    
+  char buf[MAXCHATMESSAGELEN];
+  bzero(buf,MAXCHATMESSAGELEN);
+    
+  struct sockaddr_in other_addr;
+  int fd;
+  if ((fd=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP)) < 0) {
+    fprintf(stderr, "SOCKET CREATION FAILED");
+    exit(1);
+  }
+
+  int totalpacketsrequired = (strlen(messagebody)) / 815;
+  int remainder =  strlen(messagebody) % MAXPACKETBODYLEN;
+  if(remainder > 0)
+    totalpacketsrequired++;
+    
+  /* set up destination address,where some client is listening or waiting to rx packets */
+  memset(&other_addr,0,sizeof(other_addr));
+  other_addr.sin_family=AF_INET;
+  other_addr.sin_port=htons(sendtoclient->portnum);
+    
+  //  if (inet_aton(((client_t*)curr->elem)->hostname, &other_addr.sin_addr)==0) { //check2
+  //    fprintf(stderr, "inet_aton() failed\n");
+  //    exit(1);
+  //  }
+  
+  int messageindex = 0;
+  int i = 0;
+  for(i = 0; i < totalpacketsrequired; i++)
+  {
+    strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
+    messageindex += MAXPACKETBODYLEN;
+
+    sprintf(packetbuf, "%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
+    //	  printf("now sending %s to %s:%d\n",packetbuf, ((client_t*)curr->elem)->hostname, ((client_t*)curr->elem)->portnum);
+    if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &other_addr, sizeof(other_addr)) < 0) {
+      fprintf(stderr, "sendto");
+      exit(1);
+    }
+  }
+}
 
 void multicast_UDP(packettype_t packettype, char sender[], char uid[], char messagebody[]){
     
