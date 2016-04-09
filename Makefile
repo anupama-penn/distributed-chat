@@ -1,15 +1,15 @@
 PARENTDIR=..
-CFLAGS=-g -Wall -I$(PARENTDIR) -pthread
+CFLAGS=-g -Wall -pthread
 CC=gcc
 LDFLAGS=
 LIBS= -lncursesw
 
 
-all: dchat.o llist.o queue.o
-	$(CC) $(CFLAGS) -o dchat dchat.o llist.o queue.o $(LIBS)
+all: dchat.o llist.o queue.o messagingprotocol.o clientmanagement.o messagemanagement.o unreliablesplash.o
+	$(CC) $(CFLAGS) -o dchat dchat.o messagingprotocol.o clientmanagement.o messagemanagement.o llist.o queue.o unreliablesplash.o  $(LIBS)
 
-dchat.o : dchat.c dchat.h llist.c llist.h queue.c queue.h
-	$(CC) $(CFLAGS) -c dchat.c dchat.h queue.h queue.c llist.c llist.h $(LIBS)
+dchat.o : dchat.c dchat.h clientmanagement.c clientmanagement.h messagingprotocol.c messagingprotocol.h messagemanagement.c messagemanagement.h llist.c llist.h queue.c queue.h unreliablesplash.c send_msg.h unreliablesplash.h
+	$(CC) $(CFLAGS) -c dchat.c messagingprotocol.c clientmanagement.c messagemanagement.c queue.c llist.c unreliablesplash.c send_msg.h $(LIBS)
 
 clean :
 	rm -f *.o *.gch dchat

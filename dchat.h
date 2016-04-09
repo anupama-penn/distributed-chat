@@ -1,3 +1,4 @@
+#pragma once
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
@@ -13,13 +14,19 @@
 #include <signal.h>
 #include <stdint.h>
 #include <time.h>
+#include <ncursesw/curses.h>
 
 #include "queue.h"
 #include "llist.h"
+#include "send_msg.h"
+#include "unreliablesplash.h"
 
 #define QUEUE_SIZE 128
 #define INITIAL_CLIENT_COUNT 8
 #define MSGBUFSIZE 256
+
+#define RECEIVE_THREADNUM 0
+#define SEND_THREADNUM 1
 
 #define MAXIPLEN 32
 #define MAXSENDERLEN 64
@@ -33,48 +40,15 @@
 
 #define DEFAULTPORT 2886
 
-#define RECEIVE_THREADNUM 0
-#define SEND_THREADNUM 1
-
-enum bool
+/*enum bool_t
 {
   FALSE=0,
   TRUE=1
 };
-typedef enum bool bool_t;
+typedef enum bool_t bool_t;*/
 
-/*typedef enum bool
-{
-  FALSE=0,
-  TRUE=1
-  } bool_t;*/
-//
-//Message types
 enum packettype { CHAT = 0, SEQUENCE = 1, CHECKUP = 2, ELECTION = 3, VOTE = 4, VICTORY = 5, JOIN_REQUEST = 6, LEADER_INFO = 7, JOIN = 8};
 typedef enum packettype packettype_t;
-//
-
-// Function Declarations
-//void print(clist *); // print client list
-void getLocalIp(char*);
-void holdElection();
-
-
-//int isSequencer = 0;
-//int alloc_clients_size;
-
-//clist *clientlist;
-
-
-//cname userdata;
-//static char buf[1024];
-
-static int LOCALPORT = DEFAULTPORT;
-static llist_t* UNSEQ_CHAT_MSGS;
-static llist_t* CLIENTS;
-static queue_t* HBACK_Q; 
-
-bool_t INITIALIZED = FALSE;
 
 typedef struct packet_t {
   char sender[MAXSENDERLEN];
@@ -88,8 +62,8 @@ typedef struct packet_t {
 typedef struct chatmessage_t {
   int seqnum;
   int numpacketsexpected;
-  bool_t iscomplete;
-  bool_t packetsreceived[MESSAGEMULTIPLIER];//indicates which packets have been received
+  bool iscomplete;
+  bool packetsreceived[MESSAGEMULTIPLIER];//indicates which packets have been received
   char sender[MAXSENDERLEN];
   char uid[MAXUIDLEN];
   char messagebody[MAXCHATMESSAGELEN];
@@ -99,119 +73,51 @@ typedef struct client_t {
   char username[MAXSENDERLEN];
   char hostname[MAXIPLEN];
   int portnum;
-  bool_t isleader; 
+  bool isleader; 
 } client_t;
 
-//bool_t returnsabool();
-
-/*// rpc part start
-
-const MAX_MSG_LEN = 512;        // 64 Bytes
-//const MAX_USR_LEN = 32;         // 4 Bytes
-//const MAX_IP_LEN =  32;		    // 4 Bytes
-//const BUFLEN = 556;             // WTF MATE
-
-pptypedef string msg_send<MAX_MSG_LEN>;
-typedef string uname<MAX_USR_LEN>;
-typedef string hoststr<MAX_IP_LEN>;
-
-enum msg_type_t {TEXT = 0, NEWUSER = 1, USEREXIT = 2, ELECTION = 3};
-enum status_code {JSUCCESS = 0, JFAILURE = 1, UNAMEINUSE = 2, UNAMEINVALID = 3};
 
 
-struct cname {
-    
-    uname userName;
-    hoststr hostname;
-    int lport;
-    int leader_flag;
-    
-};
 
-typedef struct cname cname;
+//int isSequencer = 0;
+//int alloc_clients_size;
 
-struct clist {
-    cname clientlist<>;
-    
-};
-
-struct msg_recv {
-    msg_send msg_sent;
-    uname user_sent;
-    unsigned int seq_num;
-    msg_type_t msg_type;
-};
-
-//rpc part end
+//clist *clientlist;
 
 
-clist *clients;
-msg_recv *msg_buffer;
+//cname userdata;
+//static char buf[1024];
 
-char buf[BUFLEN];
+llist_t* UNSEQ_CHAT_MSGS;
+llist_t* CLIENTS;
+queue_t* HBACK_Q; 
+client_t* me;
+int LOCALPORT;
+char* LOCALHOSTNAME;
+int SEQ_NO; 
+int LEADER_SEQ_NO; 
 
+//int LOCALPORT = DEFAULTPORT;
+//static bool INITIALIZED = FALSE;
 
-int alloc_client_size;
-int seq_num = 0;
-*/
+// Function Declarations
+
 void error(char*);
 
-bool_t check_chatmessage_completeness(chatmessage_t*);
-
-//create a new chatmessgae given a packet
-chatmessage_t* create_chatmessage(packet_t*);
-
-//add this CHAT packet's contents to the appropriate chat message
-//returns whether or not this message is now complete
-bool_t append_to_chatmessage(chatmessage_t*, packet_t*);
-
-// comparing sequence number of messages to print it acc to total ordering
-//int message_compare(const void* varname, const void*);
-
-// chack if input is of-> enum msg_type_t;TEXT = 0, NEWUSER = 1, USEREXIT = 2, ELECTION = 3};
-packet_t* parsePacket(char*);
-
-chatmessage_t* find_chatmessage(char uid[]);
-
-void *receive_UDP(void* t);
-void multicast_UDP(packettype_t packettype, char sender[], char messagebody[]);
 void *get_user_input(void* t);
-
-// incomplete
-// discover IP address using name
-void getLocalIp(char*);
-
-void print_client_list();
 
 //incomplete
 void holdElection();
 
 // add some way to check if client is alive
-bool_t initialize_data_structures();
+
+bool initialize_data_structures();
 
 //void destroy_data_structures();
-
-//void send_UDP_packet( msg_type_t, int, uname, msg_send);
-
-//void multicast_clients(uname, hoststr, int, int);
-
-//void multicast_exit(uname*);
-
-//add to client list
-//int add(cname *);
-
-//void send_UDP_packet(msg_recv *);
-
-// retry getting message
-//msg_recv* retry(int*);
-
-// exit of a client
-//void exit(uname*);
 
 // keep checking if sequencer is alive
 //int check();
 
 //void shutdown();
 
-client_t* add_client(char username[], char hostname[], int portnum, bool_t isleader);
-void remove_client(char hostname[], int portnum);
+//UI functions

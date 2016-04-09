@@ -1,3 +1,4 @@
+#pragma once
 #include <stdlib.h>
 
 typedef struct node_t //for use in llist_t
@@ -21,6 +22,9 @@ void init_list(struct llist_t* list);
 struct node_t* add_elem(struct llist_t* list, void* elem);
 
 //remove elem from list
+void* remove_elem(struct llist_t* list, void* elem);
+
+//remove node from list
 void* remove_node(struct llist_t* list, struct node_t* condemned);
 
 //frees all the contents of list
