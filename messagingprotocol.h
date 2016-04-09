@@ -1,7 +1,7 @@
-//#pragma once
+#pragma once
 #include "dchat.h"
 
-static int LOCALPORT = DEFAULTPORT;
+int LOCALPORT;;
 
 packet_t* parsePacket(char*);
 void *receive_UDP(void* t);

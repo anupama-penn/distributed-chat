@@ -71,11 +71,11 @@ void holdElection();
 //cname userdata;
 //static char buf[1024];
 
-static llist_t* UNSEQ_CHAT_MSGS;
-static llist_t* CLIENTS;
-static queue_t* HBACK_Q; 
-
-static bool_t INITIALIZED = FALSE;
+llist_t* UNSEQ_CHAT_MSGS;
+llist_t* CLIENTS;
+queue_t* HBACK_Q; 
+//int LOCALPORT = DEFAULTPORT;
+//static bool_t INITIALIZED = FALSE;
 
 typedef struct chatmessage_t {
   int seqnum;
@@ -166,8 +166,6 @@ chatmessage_t* find_chatmessage(char uid[]);
 
 void *get_user_input(void* t);
 
-void print_client_list();
-
 //incomplete
 void holdElection();
 
@@ -198,5 +196,3 @@ bool_t initialize_data_structures();
 
 //void shutdown();
 
-client_t* add_client(char username[], char hostname[], int portnum, bool_t isleader);
-void remove_client(char hostname[], int portnum);

@@ -1,5 +1,6 @@
 #include "dchat.h"
 #include "messagingprotocol.h"
+#include "clientmanagement.h"
 
 void error(char *x){
   perror(x);
@@ -83,28 +84,6 @@ chatmessage_t* find_chatmessage(char uid[])
   return NULL;
 }
 
-
-
-//reimplement using llist_t* CLIENTS of client_t's
-void print_client_list() {
-  int numclients = CLIENTS->numnodes;
-    
-  printf("Total # of Clients:\t%d\n", numclients);
-
-  node_t* curr = CLIENTS->head;
-  while(curr != NULL)
-  {
-    printf("%s %s: %d",((client_t*)curr->elem)->username,
-	   ((client_t*)curr->elem)->hostname,
-	   ((client_t*)curr->elem)->portnum);
-
-    if(((client_t*)curr->elem)->isleader == TRUE)
-            printf(" I...am...LEADER!!!");
-    printf("\n");
-    curr = curr->next;
-  }
-}
-
 //incomplete
 void holdElection() {
     //Elect a new sequencer
@@ -118,8 +97,9 @@ bool_t initialize_data_structures() {
   init_list(CLIENTS);
   init_list(UNSEQ_CHAT_MSGS);
 
-  INITIALIZED = TRUE;
-  return INITIALIZED;
+  //  INITIALIZED = TRUE;
+  //  return INITIALIZED;
+  return TRUE;
 }
 
 /*
@@ -144,45 +124,6 @@ void destroy_data_structures() {
         }
     }
     }*/
-
-client_t* add_client(char username[], char hostname[], int portnum, bool_t isleader)
-{
-  client_t* newclient = (client_t*)malloc(sizeof(client_t));
-  strcpy(newclient->username,username);
-  strcpy(newclient->hostname,hostname);
-  newclient->portnum = portnum;
-  newclient->isleader = isleader;
-  add_elem(CLIENTS,(void*)newclient);
-  return newclient;
-}
-
-void remove_client(char hostname[], int portnum)
-{
-  client_t* client;
-  node_t* curr = CLIENTS->head;
-  bool_t found = FALSE;
-  while(curr != NULL)
-  {
-    client = ((client_t*)curr->elem);
-    if(strcmp(hostname,client->hostname) == 0 && portnum == client->portnum)
-    {
-      found = TRUE;
-      break;
-    }
-    curr = curr->next;
-  }
-  if(found)
-  {
-    remove_node(CLIENTS,curr);
-  }
-  free(client);
-  client = NULL;
-}
-
-
-
-
-
 
 /*
 void shutdown(){
@@ -219,9 +160,10 @@ void create_message_threads()
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
   //start a thread for each
-  //TODO figure out how to do this simultaneously
   pthread_create(&threads[RECEIVE_THREADNUM], &attr, receive_UDP, (void *)RECEIVE_THREADNUM);
   pthread_create(&threads[SEND_THREADNUM], &attr, get_user_input, (void *)SEND_THREADNUM);
+
+  printf("created msg threads\n");
 
   pthread_join(threads[RECEIVE_THREADNUM], &exitstatus);
   pthread_join(threads[SEND_THREADNUM], &exitstatus);
@@ -229,8 +171,8 @@ void create_message_threads()
 
 int main(int argc, char* argv[]){
     
-  CLIENTS = (llist_t*) malloc(sizeof(llist_t));
   UNSEQ_CHAT_MSGS = (llist_t*) malloc(sizeof(llist_t));
+  CLIENTS = (llist_t*) malloc(sizeof(llist_t));
   initialize_data_structures();
 
   printf("I'm awake.\n");
@@ -239,25 +181,17 @@ int main(int argc, char* argv[]){
   if(strcmp(argv[1],"5000"))
   {
     LOCALPORT = 6000;
-    printf("I'm 6000\n");
-    add_client("follower\0","127.0.0.1\0",5000,FALSE);
-    add_client("follower\0","127.0.0.1\0",6000,FALSE);
-    //    receive_UDP();
   }
   else if(strcmp(argv[1],"6000"))
   {
     LOCALPORT = 5000;
-    printf("I'm 5000\n");
-    add_client("leader\0","127.0.0.1\0",5000,TRUE);
-    add_client("leader\0","127.0.0.1\0",6000,TRUE);
-    //    multicast_UDP(CHAT, "name", "hello");
   }
+  printf("I'm %d\n",LOCALPORT);
+  add_client("leader\0","127.0.0.1\0",5000,FALSE);
+  add_client("follower\0","127.0.0.1\0",6000,FALSE);
 
   create_message_threads();
 
-
-
-  while(1);
   return 0;
   /*    pid_t pID = fork();
     if (pID == 0) {
