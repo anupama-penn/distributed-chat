@@ -88,12 +88,16 @@ typedef struct client_t {
 llist_t* UNSEQ_CHAT_MSGS;
 llist_t* CLIENTS;
 queue_t* HBACK_Q; 
+client_t* me;
+int LOCALPORT;
+char* LOCALHOSTNAME;
+int SEQ_NO; 
+int LEADER_SEQ_NO; 
+
 //int LOCALPORT = DEFAULTPORT;
 //static bool_t INITIALIZED = FALSE;
 
 // Function Declarations
-//void print(clist *); // print client list
-void holdElection();
 
 void error(char*);
 

@@ -60,7 +60,10 @@ void *get_user_input(void* t)
   {
     scanf("%s",userinput);
     char* sendstr = strdup(userinput);
-    multicast_UDP(CHAT,"myname", sendstr);
+    int timestamp = (int)time(NULL);
+    char uid[MAXUIDLEN];
+    sprintf(uid,"%d",timestamp);
+    multicast_UDP(CHAT,"myname", uid, sendstr);
     free(sendstr);
   }
   pthread_exit((void *)t);
@@ -81,8 +84,6 @@ void create_message_threads()
   pthread_create(&threads[RECEIVE_THREADNUM], &attr, receive_UDP, (void *)RECEIVE_THREADNUM);
   pthread_create(&threads[SEND_THREADNUM], &attr, get_user_input, (void *)SEND_THREADNUM);
 
-  printf("created msg threads\n");
-
   pthread_join(threads[RECEIVE_THREADNUM], &exitstatus);
   pthread_join(threads[SEND_THREADNUM], &exitstatus);
 }
@@ -96,20 +97,25 @@ int main(int argc, char* argv[]){
 
   printf("I'm awake.\n");
 
-  //add the other fake guy
   if(strcmp(argv[1],"5000"))
   {
     LOCALPORT = 6000;
   }
   else if(strcmp(argv[1],"6000"))
   {
-    LOCALPORT = 5000;
+    LOCALPORT = 5000;    
   }
+  LOCALHOSTNAME = "127.0.0.1";
   printf("I'm %d\n",LOCALPORT);
-  add_client("leader\0","127.0.0.1\0",5000,FALSE);
+  //add the other fake guy
+  add_client("leader\0","127.0.0.1\0",5000,TRUE);
   add_client("follower\0","127.0.0.1\0",6000,FALSE);
 
+  if(me->isleader)
+    printf("***I AM LEADER!!!***\n");
+
   SEQ_NO = 0;
+  LEADER_SEQ_NO = 0;
   create_message_threads();
 
   return 0;

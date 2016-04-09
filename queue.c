@@ -40,7 +40,7 @@ queue_t *init(int (*cmp)(void *m1, void *m2), size_t init_capacity) {
     return q;
 }
 
-void q_enqueue(queue_t *q, const void *msg) {
+void q_enqueue(queue_t *q, void *msg) {
     if(q == NULL) {
       return;
     }
@@ -72,6 +72,17 @@ void *q_dequeue(queue_t *q) {
     q->num_elements--;
     heapify(q, 0);
     return (item);
+}
+
+void *q_peek(queue_t *q)
+{
+  if(q == NULL) {
+    return NULL;
+  }
+  if (q->num_elements < 1) {
+    return NULL;
+  }
+  return q->messages[0];
 }
 
 void q_delete(queue_t *q) {

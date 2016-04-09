@@ -33,7 +33,7 @@ void *receive_UDP(void* t)
     addr.sin_family=AF_INET;
     addr.sin_addr.s_addr=htonl(INADDR_ANY); /* N.B.: differs from sender */
     addr.sin_port=htons(LOCALPORT);
-    printf("Binding %d\n",LOCALPORT);
+    //    printf("Binding %d\n",LOCALPORT);
     
     //bind to receive address
     
@@ -52,8 +52,6 @@ void *receive_UDP(void* t)
             perror("recvfrom");
             exit(1);
         }
-
-	printf("RECEIVED:\n\t%s\n",buf);
 
 	packet_t* newpacket = parsePacket(buf);
 	chatmessage_t* message;
@@ -79,14 +77,35 @@ void *receive_UDP(void* t)
 
 	  //for now, just print if it's complete
 	  if(completed)
-	    printf("\E[34m%s\E(B\E[m:\t%s\n", message->sender, message->messagebody);
+	    printf("\E[34m%s\E(B\E[m (not sequenced):\t%s\n", message->sender, message->messagebody);
 
 	  //if am the leader, prep and send a sequencing message for this chatmessage
-	  //if not, put it in the unsequenced message list until further notice
+	  if(me->isleader)
+	  {
+	    char seqnum[5];
+	    sprintf(seqnum,"%d",LEADER_SEQ_NO);
+	    int timestamp = (int)time(NULL);
+	    char uid[MAXUIDLEN];
+	    sprintf(uid,"%d",timestamp);
+	    multicast_UDP(SEQUENCE,me->username,uid,seqnum);
+	    LEADER_SEQ_NO++;
+	  }
 	  break;
 	case SEQUENCE:
 	  //This is a sequencing message. Find the corresponding chat message in the unsequenced message list and enqueue it properly
-	  //If the corresponding message is not complete, ask the leader for its missing part first. It will be received as a chat. 
+	  message = find_chatmessage(newpacket->uid);
+	  //If the corresponding message is not complete, ask the leader for its missing part first. It will be received as a chat. TODO
+	  message->seqnum = atoi(newpacket->packetbody);
+	  q_enqueue(HBACK_Q,(void*)message);
+	  chatmessage_t* firstmessage = (chatmessage_t*)q_peek(HBACK_Q);
+	  if(firstmessage->seqnum <= SEQ_NO)
+	  {
+	    SEQ_NO = firstmessage->seqnum + 1;
+	    printf("\E[34m%s\E(B\E[m (sequenced: %d):\t%s\n", firstmessage->sender, firstmessage->seqnum,firstmessage->messagebody);
+	  }
+
+	  //check if the front of the queue corresponds to our expected current sequence no. If so, print it. If not, we should wait or eventually ping the leader for it.
+
 	  break;
 	case CHECKUP:
 	  break;
@@ -175,7 +194,7 @@ void getLocalIp(char *buf){
 }
 
 
-void multicast_UDP(packettype_t packettype, char sender[], char messagebody[]){
+void multicast_UDP(packettype_t packettype, char sender[], char uid[], char messagebody[]){
     
     struct sockaddr_in addr;
     int fd;
@@ -196,11 +215,6 @@ void multicast_UDP(packettype_t packettype, char sender[], char messagebody[]){
     node_t* curr = CLIENTS->head;
     char packetbodybuf[MAXPACKETBODYLEN];
     char packetbuf[MAXPACKETLEN];
-    
-    int timestamp = (int)time(NULL);
-    char uid[MAXUIDLEN];
-    sprintf(uid,"%d",timestamp);
-
 
     //    printf("total packets required: %d\n", totalpacketsrequired);
     while(curr != NULL)

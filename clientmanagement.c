@@ -27,9 +27,9 @@ client_t* add_client(char username[], char hostname[], int portnum, bool_t islea
   strcpy(newclient->hostname,hostname);
   newclient->portnum = portnum;
   newclient->isleader = isleader;
-  printf("About to add client\n");
+  if(portnum==LOCALPORT && strcmp(hostname,LOCALHOSTNAME) == 0)
+    me = newclient;
   add_elem(CLIENTS,(void*)newclient);
-  printf("Added client\n");
   return newclient;
 }
 
@@ -55,3 +55,8 @@ void remove_client(char hostname[], int portnum)
   free(client);
   client = NULL;
 }
+
+void holdElection() {
+    //Elect a new sequencer
+}
+
