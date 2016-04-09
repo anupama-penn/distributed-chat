@@ -456,7 +456,27 @@ void print_infos()
   {
     pthread_mutex_lock(&disp_mutex);
     wclear(infownd->window);
-    mvwaddstr(infownd->window,5,5,"HELP MENU!");
+    wattron(infownd->window,A_BOLD);
+    wattron(infownd->window,COLOR_PAIR(3));    
+    mvwaddstr(infownd->window,2,infownd->ncols/2-11,"***               ***");
+    wattroff(infownd->window,COLOR_PAIR(3));    
+    wattron(infownd->window,COLOR_PAIR(1));    
+    mvwaddstr(infownd->window,2,infownd->ncols/2-8,"Unreliable");
+    wattroff(infownd->window,COLOR_PAIR(1));    
+    wattron(infownd->window,COLOR_PAIR(2));    
+    mvwaddstr(infownd->window,2,infownd->ncols/2+3,"Chat");
+    wattroff(infownd->window,COLOR_PAIR(2));    
+    wattron(infownd->window,COLOR_PAIR(4));    
+    mvwaddstr(infownd->window,3,infownd->ncols/2-5,"HELP MENU");
+    wattroff(infownd->window,COLOR_PAIR(4));    
+    wattroff(infownd->window,A_BOLD);
+
+    wattron(infownd->window,COLOR_PAIR(1));    
+    wattron(infownd->window,A_BOLD);
+    mvwaddstr(infownd->window,infownd->nrows-3,infownd->ncols-25,"<H> TO TOGGLE UPDATES");
+    wattroff(infownd->window,COLOR_PAIR(1));    
+    wattroff(infownd->window,A_BOLD);
+
     wrefresh(infownd->window);
     pthread_mutex_unlock(&disp_mutex);
     setborder(infownd);
@@ -535,11 +555,11 @@ void print_infos()
     mvwaddstr(infownd->window,infownd->nrows-2,1," V V V V ");
     wattron(infownd->window,COLOR_PAIR(1));    
     wattron(infownd->window,A_BOLD);
-    mvwaddstr(infownd->window,infownd->nrows-2,9," MORE MESSAGES BELOW ");
+    mvwaddstr(infownd->window,infownd->nrows-2,9," MORE UPDATES BELOW ");
     wattroff(infownd->window,A_BOLD);
     wattroff(infownd->window,COLOR_PAIR(1));    
     int i = 0;
-    for(i = 30; i < infownd->ncols-1; i+=2)
+    for(i = 29; i < infownd->ncols-1; i+=2)
       mvwaddch(infownd->window,infownd->nrows-2,i,'V');
   }
   wrefresh(infownd->window);
