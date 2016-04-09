@@ -49,6 +49,8 @@ llist_t* INFOS;
 node_t* LAST_MSG_NODE;
 node_t* LAST_INFO_NODE;
 
+int showhelp;
+
 char MY_MSG[1024];
 int MY_MSG_INDEX;
 
@@ -251,7 +253,7 @@ void *splashcurses(void *t)
 
 
 
-void add_msg(char* user, char message[], llist_t* msglist)
+uimessage_t* add_msg(char* user, char message[], llist_t* msglist, int append)
 {
   int maxline = msgwnd->ncols/2-2;
   int numlines = strlen(message)/maxline;
@@ -285,7 +287,7 @@ void add_msg(char* user, char message[], llist_t* msglist)
     maxwidth = strlen(message);
   }
 
-  if(msglist->tail != NULL && strcmp(((uimessage_t*)msglist->tail->elem)->username,user) == 0)
+  if(msglist->tail != NULL && strcmp(((uimessage_t*)msglist->tail->elem)->username,user) == 0 && append)
   {
     char* prevmsg = ((uimessage_t*)msglist->tail->elem)->message;
     char* combinedmsg = (char*)malloc(sizeof(char)*(strlen(msglines)+strlen(prevmsg)+1));
@@ -297,6 +299,7 @@ void add_msg(char* user, char message[], llist_t* msglist)
     ((uimessage_t*)msglist->tail->elem)->numlines += numlines;
     if(maxwidth > ((uimessage_t*)msglist->tail->elem)->maxwidth)
       ((uimessage_t*)msglist->tail->elem)->maxwidth = maxwidth;
+    return NULL;
   }
   else
   {
@@ -306,7 +309,7 @@ void add_msg(char* user, char message[], llist_t* msglist)
     newmessage->message = msglines;
     newmessage->numlines = numlines;
     newmessage->maxwidth = maxwidth;
-    return add_elem(msglist, (void*)newmessage);
+    return newmessage;
   }
 
 }
@@ -449,7 +452,39 @@ void print_msgs()
 
 void print_infos()
 {
-  int linenum = infownd->nrows-3;
+  if(showhelp)
+  {
+    pthread_mutex_lock(&disp_mutex);
+    wclear(infownd->window);
+    wattron(infownd->window,A_BOLD);
+    wattron(infownd->window,COLOR_PAIR(3));    
+    mvwaddstr(infownd->window,2,infownd->ncols/2-11,"***               ***");
+    wattroff(infownd->window,COLOR_PAIR(3));    
+    wattron(infownd->window,COLOR_PAIR(1));    
+    mvwaddstr(infownd->window,2,infownd->ncols/2-8,"Unreliable");
+    wattroff(infownd->window,COLOR_PAIR(1));    
+    wattron(infownd->window,COLOR_PAIR(2));    
+    mvwaddstr(infownd->window,2,infownd->ncols/2+3,"Chat");
+    wattroff(infownd->window,COLOR_PAIR(2));    
+    wattron(infownd->window,COLOR_PAIR(4));    
+    mvwaddstr(infownd->window,3,infownd->ncols/2-5,"HELP MENU");
+    wattroff(infownd->window,COLOR_PAIR(4));    
+    wattroff(infownd->window,A_BOLD);
+
+    wattron(infownd->window,COLOR_PAIR(1));    
+    wattron(infownd->window,A_BOLD);
+    mvwaddstr(infownd->window,infownd->nrows-3,infownd->ncols-25,"<H> TO TOGGLE UPDATES");
+    wattroff(infownd->window,COLOR_PAIR(1));    
+    wattroff(infownd->window,A_BOLD);
+
+    wrefresh(infownd->window);
+    pthread_mutex_unlock(&disp_mutex);
+    setborder(infownd);
+
+    return;
+  }
+
+  int linenum = infownd->nrows-5;
 
   node_t* curr = LAST_INFO_NODE;
   pthread_mutex_lock(&disp_mutex);
@@ -468,9 +503,9 @@ void print_infos()
     pthread_mutex_lock(&disp_mutex);
     int i = 0;
     char currchar = ' ';
-    linenum-=uimsg->numlines;
-    msgwnd->r = linenum;
-    msgwnd->c = start;
+    linenum-=uimsg->numlines-1;
+    infownd->r = linenum;
+    infownd->c = start;
     currchar = uimsg->message[i];
     while(currchar != '\0')
     {     
@@ -509,16 +544,22 @@ void print_infos()
     curr=curr->prev;
   }
   pthread_mutex_lock(&disp_mutex);
+  wattron(infownd->window,COLOR_PAIR(1));    
+  wattron(infownd->window,A_BOLD);
+  mvwaddstr(infownd->window,infownd->nrows-3,infownd->ncols-15,"<H> FOR HELP");
+  wattroff(infownd->window,COLOR_PAIR(1));    
+  wattroff(infownd->window,A_BOLD);
+
   if(INFOS->tail != LAST_INFO_NODE)
   {
     mvwaddstr(infownd->window,infownd->nrows-2,1," V V V V ");
-    wattron(infownd->window,COLOR_PAIR(2));    
+    wattron(infownd->window,COLOR_PAIR(1));    
     wattron(infownd->window,A_BOLD);
-    mvwaddstr(infownd->window,infownd->nrows-2,9," MORE MESSAGES BELOW ");
+    mvwaddstr(infownd->window,infownd->nrows-2,9," MORE UPDATES BELOW ");
     wattroff(infownd->window,A_BOLD);
-    wattroff(infownd->window,COLOR_PAIR(2));    
+    wattroff(infownd->window,COLOR_PAIR(1));    
     int i = 0;
-    for(i = 30; i < infownd->ncols-1; i+=2)
+    for(i = 29; i < infownd->ncols-1; i+=2)
       mvwaddch(infownd->window,infownd->nrows-2,i,'V');
   }
   wrefresh(infownd->window);
@@ -528,23 +569,27 @@ void print_infos()
 
 void print_msg(char* user, char message[])
 {
-  add_msg(user,message,MSGS);
-  node_t* newtail = print_msgs();
-  int end = LAST_MSG_NODE == msglist->tail;
-    else
-      end = LAST_INFO_NODE == msglist->tail;
-    node_t* newtail = add_elem(msglist, (void*)newmessage);
-    if(end && msglist == MSGS)
+  uimessage_t* newmessage = add_msg(user,message,MSGS,1);
+  if(newmessage)
+  {
+    int end = LAST_MSG_NODE == MSGS->tail;
+    node_t* newtail = add_elem(MSGS, (void*)newmessage);
+    if(end)
       LAST_MSG_NODE = newtail;
-    else if(end)
-    LAST_INFO_NODE = newtail;
-    
-
+  }
+  print_msgs();
 }
 
 void print_info(char* user, char message[])
 {
-  add_msg(user,message,INFOS);
+  uimessage_t* newmessage = add_msg(user,message,INFOS,0);
+  if(newmessage)
+  {
+    int end = LAST_INFO_NODE == INFOS->tail;
+    node_t* newtail = add_elem(INFOS, (void*)newmessage);
+    if(end)
+      LAST_INFO_NODE = newtail;
+  }
   print_infos();
 }
 
@@ -553,11 +598,11 @@ void *spoof_updates(void *t)
   while(1)
   {
     print_info("Alice","has joined the chat");
-    sleep(5);
+    sleep(2);
     print_info("Alice","has left the chat");
-    sleep(10);
+    sleep(3);
     print_info("Bob","is Bob.");
-    sleep(10);
+    sleep(4);
   }
   pthread_exit((void *)t);
 }
@@ -782,6 +827,7 @@ void initui(int isdebug)
   inputwnd = init_wnd(11, 97, nrows-11, 1);
   msgwnd = init_wnd(nrows, ncols-99, 0, 98);
   keypad(msgwnd->window,TRUE);
+  keypad(infownd->window,TRUE);
   focusable_wnds[0] = infownd;
   focusable_wnds[1] = inputwnd;
   focusable_wnds[2] = msgwnd;
@@ -845,6 +891,44 @@ void initui(int isdebug)
 	  LAST_MSG_NODE = MSGS->tail;
 	  print_msgs();
 	}
+      }
+      else if(focuswnd == infownd)
+      {
+	if(d == KEY_UP)
+	{
+	  if(LAST_INFO_NODE != INFOS->head)
+	  {
+	    LAST_INFO_NODE = LAST_INFO_NODE->prev;
+	    print_infos();
+	  }
+	}
+	else if(d == KEY_DOWN)
+	{
+	  if(LAST_INFO_NODE != INFOS->tail)
+	  {
+	    LAST_INFO_NODE = LAST_INFO_NODE->next;
+	    print_infos();
+	  }
+	}
+	else if(d == KEY_LEFT)
+	{
+	  LAST_INFO_NODE = INFOS->head;
+	  print_infos();
+	}
+	else if(d == KEY_RIGHT)
+	{
+	  LAST_INFO_NODE = INFOS->tail;
+	  print_infos();
+	}
+	else if (d == 'h')
+	{
+	  if(showhelp)
+	    showhelp = 0;
+	  else
+	    showhelp = 1;
+	  print_infos();
+	}
+
       }
     }
   }
