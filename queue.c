@@ -24,7 +24,7 @@ int getRightChild(int index) {
   return 2*index + 2;
 }
 
-queue_t *init(int (*cmp)(const void *m1, const void *m2), size_t init_capacity) {
+queue_t *init(int (*cmp)(void *m1, void *m2), size_t init_capacity) {
     queue_t *q = NULL;
     q = malloc(sizeof(*q));
     if(cmp == NULL || q == NULL) {
@@ -46,7 +46,7 @@ void q_enqueue(queue_t *q, const void *msg) {
     }
     if (q->num_elements >= q->capacity) {
         //REALLOC
-
+      printf("Can't reallocate. Not implemented.\n");
     }
     q->messages[q->num_elements] = (void*) msg;
     int idx = q->num_elements;

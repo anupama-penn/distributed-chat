@@ -7,7 +7,7 @@ typedef struct queue_t {
     int (*cmp)(const void *m1, const void *m2);
 } queue_t;
 
-queue_t *init(int (*cmp)(const void *m1, const void *m2), size_t init_capacity);
+queue_t *init(int (*cmp)(void *m1, void *m2), size_t init_capacity);
 
 void q_delete(queue_t *q);
 

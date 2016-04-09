@@ -53,11 +53,11 @@ bool_t append_to_chatmessage(chatmessage_t* message, packet_t* newpacket)
 }
 
 // comparing sequence number of messages to print it acc to total ordering
-int message_compare(chatmessage_t* message1, chatmessage_t* message2)
+int message_compare(void* message1, void* message2)
 {
-  if(message1->seqnum > message2->seqnum)
+  if(((chatmessage_t*)message1)->seqnum > ((chatmessage_t*)message2)->seqnum)
     return 1;
-  else if(message1->seqnum < message2->seqnum)
+  else if(((chatmessage_t*)message1)->seqnum < ((chatmessage_t*)message2)->seqnum)
     return -1;
   return 0;
 }

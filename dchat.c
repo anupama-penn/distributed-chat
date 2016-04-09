@@ -8,12 +8,6 @@ void error(char *x){
   exit(1);
 }
 
-
-//incomplete
-void holdElection() {
-    //Elect a new sequencer
-}
-
 // add some way to check if client is alive
 
 bool_t initialize_data_structures() {
@@ -97,6 +91,7 @@ int main(int argc, char* argv[]){
     
   UNSEQ_CHAT_MSGS = (llist_t*) malloc(sizeof(llist_t));
   CLIENTS = (llist_t*) malloc(sizeof(llist_t));
+  HBACK_Q = init(message_compare,100);
   initialize_data_structures();
 
   printf("I'm awake.\n");
@@ -114,6 +109,7 @@ int main(int argc, char* argv[]){
   add_client("leader\0","127.0.0.1\0",5000,FALSE);
   add_client("follower\0","127.0.0.1\0",6000,FALSE);
 
+  SEQ_NO = 0;
   create_message_threads();
 
   return 0;

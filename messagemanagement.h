@@ -10,6 +10,6 @@ chatmessage_t* create_chatmessage(packet_t*);
 bool_t append_to_chatmessage(chatmessage_t*, packet_t*);
 
 // comparing sequence number of messages to print it acc to total ordering
-int message_compare(chatmessage_t* message1, chatmessage_t* message2);
+int message_compare(void* message1, void* message2);
 
 chatmessage_t* find_chatmessage(char uid[]);
