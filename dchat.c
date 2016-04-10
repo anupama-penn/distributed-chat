@@ -93,6 +93,57 @@ chatmessage_t* find_chatmessage(char uid[])
   return NULL;
 }
 
+void *send_UDP(packettype_t packettype, char sender[], char messagebody[],int portnum, char hostname[]){
+    
+    client_t* addnewclient = (client_t*)malloc(sizeof(client_t));
+    
+    char packetbodybuf[MAXPACKETBODYLEN];
+    char packetbuf[MAXPACKETLEN];
+    
+    struct sockaddr_in other_addr;
+    int fd;
+    if ((fd=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP)) < 0) {
+        fprintf(stderr, "SOCKET CREATION FAILED");
+        exit(1);
+    }
+    
+    int totalpacketsrequired = (strlen(messagebody)) / 815;
+    int remainder =  strlen(messagebody) % MAXPACKETBODYLEN;
+    if(remainder > 0)
+        totalpacketsrequired++;
+    
+    int timestamp = (int)time(NULL);
+    char uid[MAXUIDLEN];
+    sprintf(uid,"%d",timestamp);
+    
+    /* set up destination address,where some client is listening or waiting to rx packets */
+    memset(&other_addr,0,sizeof(other_addr));
+    other_addr.sin_family=htonl(hostname);
+    other_addr.sin_port=htons(portnum);
+    
+    if (inet_aton(hostname, &addr.sin_addr)==0) {
+        fprintf(stderr, "inet_aton() failed\n");
+        exit(1);
+    }
+    
+    //why send i?
+    int i;
+    for(i = 0; i < totalpacketsrequired; i++)
+    {
+        strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
+        messageindex += MAXPACKETBODYLEN;
+        
+        sprintf(packetbuf, "%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
+        
+        if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+            fprintf(stderr, "sendto");
+            exit(1);
+        }
+    }
+    
+}
+
+
 void *receive_UDP(void* t)
 {
     
