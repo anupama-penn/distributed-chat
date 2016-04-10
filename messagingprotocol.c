@@ -58,6 +58,7 @@ void *receive_UDP(void* t)
 	packet_t* newpacket = parsePacket(buf);
 	chatmessage_t* message;
 	bool completed = FALSE;
+	client_t* sendtoclient;
 	
 	//figure out what type of packet this is and act accordingly
 	switch(newpacket->packettype)
@@ -128,14 +129,14 @@ void *receive_UDP(void* t)
 	  break;
 	case JOIN_REQUEST:
 	  //message from someone who wants to join
-	  client_t* sendtoclient;
+
 	  sendtoclient = (client_t*)malloc(sizeof(client_t));
 	  // declare hostname_add and portnum_add to be respectively those provided in the arguments
 	  node_t* curr = CLIENTS->head;
 	  while(curr != NULL)
 	  {
 	    sendtoclient = ((client_t*)curr->elem);
-	    if(strcmp(portnum != sendtoclient->portnum))
+	    if(portnum != sendtoclient->portnum)
 	    {
 	      strcpy(sendtoclient->username,username);
 	      strcpy(sendtoclient->hostname,hostname);
