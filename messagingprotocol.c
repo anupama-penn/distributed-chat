@@ -129,24 +129,9 @@ void *receive_UDP(void* t)
 	  break;
 	case JOIN_REQUEST:
 	  //message from someone who wants to join
-
-	  sendtoclient = (client_t*)malloc(sizeof(client_t));
 	  // declare hostname_add and portnum_add to be respectively those provided in the arguments
-	  node_t* curr = CLIENTS->head;
-	  while(curr != NULL)
-	  {
-	    sendtoclient = ((client_t*)curr->elem);
-	    if(portnum != sendtoclient->portnum)
-	    {
-	      strcpy(sendtoclient->username,username);
-	      strcpy(sendtoclient->hostname,hostname);
-	      sendtoclient->portnum = portnum;
-
-	      sendtoclient->isleader = FALSE;
-	      add_elem(UNSEQ_CHAT_MSGS,(void*)sendtoclient);
-	    }
-	    curr = curr->next;
-	  }
+	  
+ 	 //multicast_UDP(JOIN, char sender[],char uid[], NULL); 
 	  break;
 	case LEADER_INFO:
 	  //if someone asked to join, but they didn't ask the leader, instead of sending a JOIN, send them this. 
@@ -154,7 +139,13 @@ void *receive_UDP(void* t)
 	  break;
 	case JOIN:
 	  //announcement that someone has successfully joined
-
+	
+	/* strcpy(sendtoclient->username,sender);
+            strcpy(sendtoclient->hostname,hostname);
+            sendtoclient->portnum = portnum;
+            sendtoclient->isleader = isleader;
+        add_elem(CLIENTS,(void*)sendtoclient);
+	*/
 	  break;
 	default:
 	  printf("\nUnrecognized packet type: %d\n", newpacket->packettype);
@@ -222,51 +213,55 @@ void getLocalIp(char *buf){
     return;
 }
 
-void send_UDP(packettype_t packettype, char sender[], char uid[], char messagebody[], client_t* sendtoclient)
+void send_UDP(packettype_t packettype,char uid[] ,char sender[], char messagebody[], client_t* sendtoclient)
 {
     
-  char packetbodybuf[MAXPACKETBODYLEN];
-  char packetbuf[MAXPACKETLEN];
+ char packetbodybuf[MAXPACKETBODYLEN];
+    char packetbuf[MAXPACKETLEN];
     
-  char buf[MAXCHATMESSAGELEN];
-  bzero(buf,MAXCHATMESSAGELEN);
-    
-  struct sockaddr_in other_addr;
-  int fd;
-  if ((fd=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP)) < 0) {
-    fprintf(stderr, "SOCKET CREATION FAILED");
-    exit(1);
-  }
-
-  int totalpacketsrequired = (strlen(messagebody)) / 815;
-  int remainder =  strlen(messagebody) % MAXPACKETBODYLEN;
-  if(remainder > 0)
-    totalpacketsrequired++;
-    
-  /* set up destination address,where some client is listening or waiting to rx packets */
-  memset(&other_addr,0,sizeof(other_addr));
-  other_addr.sin_family=AF_INET;
-  other_addr.sin_port=htons(sendtoclient->portnum);
-    
-  //  if (inet_aton(((client_t*)curr->elem)->hostname, &other_addr.sin_addr)==0) { //check2
-  //    fprintf(stderr, "inet_aton() failed\n");
-  //    exit(1);
-  //  }
-  
-  int messageindex = 0;
-  int i = 0;
-  for(i = 0; i < totalpacketsrequired; i++)
-  {
-    strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
-    messageindex += MAXPACKETBODYLEN;
-
-    sprintf(packetbuf, "%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
-    //	  printf("now sending %s to %s:%d\n",packetbuf, ((client_t*)curr->elem)->hostname, ((client_t*)curr->elem)->portnum);
-    if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &other_addr, sizeof(other_addr)) < 0) {
-      fprintf(stderr, "sendto");
-      exit(1);
+    struct sockaddr_in other_addr;
+    int fd;
+    if ((fd=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP)) < 0) {
+        fprintf(stderr, "SOCKET CREATION FAILED");
+        exit(1);
     }
-  }
+
+    int totalpacketsrequired = (strlen(messagebody)) / 815;
+    int remainder =  strlen(messagebody) % MAXPACKETBODYLEN;
+    if(remainder > 0)
+        totalpacketsrequired++;
+    
+//    int timestamp = (int)time(NULL);
+//    char uid[MAXUIDLEN];
+//    sprintf(uid,"%d",timestamp);
+
+   
+    /* set up destination address,where some client is listening or waiting to rx packets */
+    memset(&other_addr,0,sizeof(other_addr));
+    other_addr.sin_family=htonl((client_t*)sendtoclient->hostname);
+    other_addr.sin_port=htons((client_t*)sendtoclient->portnum);
+    
+    if (inet_aton((client_t*)sendtoclient->hostname, &other_addr.sin_addr)==0) {
+
+        fprintf(stderr, "inet_aton() failed\n");
+        exit(1);
+    }
+    int messageindex = 0;
+    int i;
+    for(i = 0; i < totalpacketsrequired; i++)
+    {
+        strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
+        messageindex += MAXPACKETBODYLEN;
+        
+        sprintf(packetbuf, "%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
+       
+        if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &other_addr, sizeof(other_addr)) < 0) {
+            fprintf(stderr, "sendto");
+            exit(1);
+        }
+    }
+
+
 }
 
 void multicast_UDP(packettype_t packettype, char sender[], char uid[], char messagebody[]){
