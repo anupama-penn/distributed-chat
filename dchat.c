@@ -99,7 +99,7 @@ void *checkup_on_clients(void* t)
   int counter = 0;
   while(1)
   {
-    sleep(1); // Interval between checkups
+    sleep(CHECKUP_INTERVAL); // Interval between checkups
     
     int timestamp = (int)time(NULL);
     char uid[MAXUIDLEN];
