@@ -93,9 +93,51 @@ void *get_user_input(void* t)
   pthread_exit((void *)t);
 }
 
+void *checkup_on_clients(void* t)
+{
+
+  int counter = 0;
+  while(1)
+  {
+    sleep(1); // Interval between checkups
+    
+    int timestamp = (int)time(NULL);
+    char uid[MAXUIDLEN];
+    sprintf(uid,"%d^_^%d",timestamp,counter);
+    
+    multicast_UDP(CHECKUP,me->username, uid, "ARE_YOU_ALIVE"); // multicast checkup message to everyone
+
+    node_t* curr = CLIENTS->head;
+    while(curr != NULL)
+    {
+      // increment everyones counter by one until they respond
+      ((client_t*)curr->elem)->missed_checkups++;
+
+      /*
+      * Just for debugging purposes to see the current status of missed_checkups for each client
+      
+      printf("%s %s: %d %d\n",((client_t*)curr->elem)->username,
+     ((client_t*)curr->elem)->hostname,
+     ((client_t*)curr->elem)->portnum,
+     ((client_t*)curr->elem)->missed_checkups);
+     */
+
+      // check if anyone has missed too many checkups
+      if (((client_t*)curr->elem)->missed_checkups > 4)
+      {
+        printf("I (%s) believe that (%s) is dead :)\n", me->username, ((client_t*)curr->elem)->username);
+      }
+
+      curr = curr->next;
+    }
+    counter++;
+  }
+  pthread_exit((void *)t);
+}
+
 void create_message_threads()
 {
-  int numthreads = 2;
+  int numthreads = 3;
   pthread_t threads[numthreads];
   pthread_attr_t attr;
   void *exitstatus;
@@ -107,9 +149,11 @@ void create_message_threads()
   //start a thread for each
   pthread_create(&threads[RECEIVE_THREADNUM], &attr, receive_UDP, (void *)RECEIVE_THREADNUM);
   pthread_create(&threads[SEND_THREADNUM], &attr, get_user_input, (void *)SEND_THREADNUM);
+  pthread_create(&threads[CHECKUP_THREADNUM], &attr, checkup_on_clients, (void *)CHECKUP_THREADNUM);
 
   pthread_join(threads[RECEIVE_THREADNUM], &exitstatus);
   pthread_join(threads[SEND_THREADNUM], &exitstatus);
+  pthread_join(threads[CHECKUP_THREADNUM], &exitstatus);
 }
 
 int main(int argc, char* argv[]){

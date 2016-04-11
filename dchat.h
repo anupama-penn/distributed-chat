@@ -27,6 +27,7 @@
 
 #define RECEIVE_THREADNUM 0
 #define SEND_THREADNUM 1
+#define CHECKUP_THREADNUM 2
 
 #define MAXIPLEN 32
 #define MAXSENDERLEN 64
@@ -73,7 +74,8 @@ typedef struct client_t {
   char username[MAXSENDERLEN];
   char hostname[MAXIPLEN];
   int portnum;
-  bool isleader; 
+  bool isleader;
+  int missed_checkups;
 } client_t;
 
 
@@ -105,6 +107,8 @@ int LEADER_SEQ_NO;
 void error(char*);
 
 void *get_user_input(void* t);
+
+void *checkup_on_clients(void* t);
 
 //incomplete
 void holdElection();

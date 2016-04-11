@@ -120,6 +120,27 @@ void *receive_UDP(void* t)
 
 	  break;
 	case CHECKUP:
+    if (strcmp(newpacket->packetbody,"ARE_YOU_ALIVE") == 0)
+    {
+      // send udp message to sender saying that this client is still alive
+       // printf("I (%s) am gonna send alive response to (%s)\n", me->username, newpacket->sender);
+      
+      client_t* orig_sender = find_first_client_by_username(newpacket->sender);
+      send_UDP(CHECKUP, me->username, message->uid, "I_AM_ALIVE", orig_sender);
+    }
+    else if (strcmp(newpacket->packetbody, "I_AM_ALIVE") == 0)
+    {
+      // reset sender's counter back to zero
+     // printf("Got living confirmation from (%s)\n", newpacket->sender);
+
+      client_t* orig_sender = find_first_client_by_username(newpacket->sender);
+      orig_sender->missed_checkups = 0;
+    }
+    else
+    {
+      printf("\nUnrecognized value in checkup message!\n");
+    }
+    
 	  break;
 	case ELECTION:
 	  break;
@@ -130,7 +151,7 @@ void *receive_UDP(void* t)
 	case JOIN_REQUEST:
 	  //message from someone who wants to join
 
-	  sendtoclient = (client_t*)malloc(sizeof(client_t));
+/*	  sendtoclient = (client_t*)malloc(sizeof(client_t));
 	  // declare hostname_add and portnum_add to be respectively those provided in the arguments
 	  node_t* curr = CLIENTS->head;
 	  while(curr != NULL)
@@ -147,7 +168,7 @@ void *receive_UDP(void* t)
 	    }
 	    curr = curr->next;
 	  }
-	  break;
+	  break; */
 	case LEADER_INFO:
 	  //if someone asked to join, but they didn't ask the leader, instead of sending a JOIN, send them this. 
 	  //If you receive this, repeat the JOIN_REQUEST, but to the leader. 
@@ -159,13 +180,6 @@ void *receive_UDP(void* t)
 	default:
 	  printf("\nUnrecognized packet type: %d\n", newpacket->packettype);
 	}
-
-
-
-
-
-
-
 
 
 	//begin sequencing stuff from 
