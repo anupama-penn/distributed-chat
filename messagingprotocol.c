@@ -130,88 +130,43 @@ void *receive_UDP(void* t)
 	case JOIN_REQUEST:
 	  //message from someone who wants to join
 	  // declare hostname_add and portnum_add to be respectively those provided in the arguments
-	  
- 	 //multicast_UDP(JOIN, char sender[],char uid[], NULL); 
+	
+	goto Cleanup;
+	Cleanup: ;	
+	
+	char uid[MAXUIDLEN];
+	char sender[MAXPACKETLEN];	
+	    strcpy(uid,newpacket->uid);
+            strcpy(sender,newpacket->sender);
+            
+            multicast_UDP(JOIN, sender, uid, NULL);
+  
 	  break;
 	case LEADER_INFO:
 	  //if someone asked to join, but they didn't ask the leader, instead of sending a JOIN, send them this. 
 	  //If you receive this, repeat the JOIN_REQUEST, but to the leader. 
 	  break;
 	case JOIN:
-	  //announcement that someone has successfully joined
-	
-	/* strcpy(sendtoclient->username,sender);
-            strcpy(sendtoclient->hostname,hostname);
-            sendtoclient->portnum = portnum;
-            sendtoclient->isleader = isleader;
-        add_elem(CLIENTS,(void*)sendtoclient);
-	*/
+	 // add it to the list clients
+	goto clean;
+	clean: ;
+
+	char username[MAXPACKETLEN];
+        strcpy(username,newpacket->sender);
+            
+        add_client(username,"127.0.0.1",LOCALPORT,FALSE);
+            	
+
 	  break;
+	
 	default:
 	  printf("\nUnrecognized packet type: %d\n", newpacket->packettype);
 	}
-
-
-
-
-
-
-
-
-
-	//begin sequencing stuff from 
-	/*
-        
-        msg_recv* message_got = parseMessage(&buf);
-        
-        enqueue(queue, message_got);
-        
-        msg_recv* next_message_got = dequeue(queue);
-        
-        if (squence = -1) {
-            squence = (*next_message_got).seq_num;
-        }
-        else if((*next_message_got).seq_num > squence){
-            int targetMessage = (*next_message_got).seq_num;
-            squence ++;
-        
-            while (squence <targetMessage) {
-            
-                printf("redelivery of messages is requested");
-            
-                next_message_got = retry(&squence);
-            
-                printf("%s: %s\n", (*next_message_got).user_sent, (*next_message_got).msg_sent);
-            
-                squence++;
-            }
-        }
-        
-        squence ++;
-        printf("%s: %s\n", (*next_message_got).user_sent, (*next_message_got).msg_sent);
-	*/    
+    
     }//end of while
     pthread_exit((void *)t);
 }
 
-// incomplete
-// discover IP address using name
-void getLocalIp(char *buf){
-    
-    bzero(buf,1024);
-    int sock = socket(AF_INET, SOCK_DGRAM, 0);
-    
-    // connect?
-    
-    //    struct sockaddr_in sockname;
-    //    socklen_t socknamelen = sizeof(sockname);
-    //    int err = getsockname(sock, (struct sockaddr*) &sockname, &socknamelen);
-
-
-    //    const char* p = inet_ntop(AF_INET, &sockname.sin_addr, buf, INET_ADDRSTRLEN);
-    close(sock);
-    return;
-}
 
 // adding new function- join request
 
