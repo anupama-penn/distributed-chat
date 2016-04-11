@@ -213,55 +213,71 @@ void getLocalIp(char *buf){
     return;
 }
 
-void send_UDP(packettype_t packettype,char uid[] ,char sender[], char messagebody[], client_t* sendtoclient)
-{
-    
- char packetbodybuf[MAXPACKETBODYLEN];
-    char packetbuf[MAXPACKETLEN];
-    
-    struct sockaddr_in other_addr;
-    int fd;
-    if ((fd=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP)) < 0) {
-        fprintf(stderr, "SOCKET CREATION FAILED");
-        exit(1);
-    }
+// adding new function- join request
 
-    int totalpacketsrequired = (strlen(messagebody)) / 815;
-    int remainder =  strlen(messagebody) % MAXPACKETBODYLEN;
-    if(remainder > 0)
+void join_existing_chat(char newclientname[],client_t* someclient){
+    
+    // someclient's [ip:port] is what it sends out JOIN_REQUEST to.
+    client_t* newclient = (client_t*)malloc(sizeof(client_t));
+    strcpy(newclient->username,newclientname);
+    strcpy(newclient->hostname,"127.0.0.1");
+    newclient->portnum = LOCALPORT;
+    newclient->isleader = FALSE;
+   
+    int counter = 0;
+    int timestamp = (int)time(NULL);
+    char uid[MAXUIDLEN];
+    sprintf(uid,"%d^_^%d",timestamp,counter);
+    
+    send_UDP(JOIN_REQUEST,newclientname,uid,NULL,newclient);
+
+}
+
+
+void send_UDP(packettype_t packettype,char sender[],char uid[],char messagebody[], client_t* sendtoclient)
+{
+ struct sockaddr_in other_addr;
+  int fd;
+
+  int totalpacketsrequired = (strlen(messagebody)) / 815;
+  int remainder =  strlen(messagebody) % MAXPACKETBODYLEN;
+  if(remainder > 0)
         totalpacketsrequired++;
     
-//    int timestamp = (int)time(NULL);
-//    char uid[MAXUIDLEN];
-//    sprintf(uid,"%d",timestamp);
-
-   
-    /* set up destination address,where some client is listening or waiting to rx packets */
-    memset(&other_addr,0,sizeof(other_addr));
-    other_addr.sin_family=htonl((client_t*)sendtoclient->hostname);
-    other_addr.sin_port=htons((client_t*)sendtoclient->portnum);
+    fd = socket(PF_INET,SOCK_DGRAM,0);
     
-    if (inet_aton((client_t*)sendtoclient->hostname, &other_addr.sin_addr)==0) {
-
-        fprintf(stderr, "inet_aton() failed\n");
+    if (fd < 0) {
+        fprintf(stderr,"socket create failed");
         exit(1);
     }
-    int messageindex = 0;
-    int i;
-    for(i = 0; i < totalpacketsrequired; i++)
-    {
-        strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
-        messageindex += MAXPACKETBODYLEN;
-        
-        sprintf(packetbuf, "%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
-       
-        if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &other_addr, sizeof(other_addr)) < 0) {
-            fprintf(stderr, "sendto");
-            exit(1);
-        }
+    char packetbodybuf[MAXPACKETBODYLEN];
+    char packetbuf[MAXPACKETLEN];
+    
+  /* set up destination address,where some client is listening or waiting to rx packets */
+  memset(&other_addr,0,sizeof(other_addr));
+  other_addr.sin_family=AF_INET;
+  other_addr.sin_port=htons((client_t*)sendtoclient->portnum);
+    
+    if (inet_aton(((client_t*)sendtoclient)->hostname, &other_addr.sin_addr)==0) { //check2
+      fprintf(stderr, "inet_aton() failed\n");
+      exit(1);
     }
+  
+  int messageindex = 0;
+  int i = 0;
+  for(i = 0; i < totalpacketsrequired; i++)
+  {
+    strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
+    messageindex += MAXPACKETBODYLEN;
 
-
+    sprintf(packetbuf, "%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
+    //	  printf("now sending %s to %s:%d\n",packetbuf, ((client_t*)curr->elem)->hostname, ((client_t*)curr->elem)->portnum);
+    if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &other_addr, sizeof(other_addr)) < 0) {
+      fprintf(stderr, "sendto");
+      exit(1);
+    }
+  }
+ 
 }
 
 void multicast_UDP(packettype_t packettype, char sender[], char uid[], char messagebody[]){
