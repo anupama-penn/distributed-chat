@@ -96,7 +96,7 @@ void *get_user_input(void* t)
 void *checkup_on_clients(void* t)
 {
 
-  int counter = 0;
+  int counter = 1;
   while(1)
   {
     sleep(CHECKUP_INTERVAL); // Interval between checkups
@@ -151,9 +151,20 @@ void create_message_threads()
   pthread_create(&threads[SEND_THREADNUM], &attr, get_user_input, (void *)SEND_THREADNUM);
   pthread_create(&threads[CHECKUP_THREADNUM], &attr, checkup_on_clients, (void *)CHECKUP_THREADNUM);
 
-  pthread_join(threads[RECEIVE_THREADNUM], &exitstatus);
-  pthread_join(threads[SEND_THREADNUM], &exitstatus);
-  pthread_join(threads[CHECKUP_THREADNUM], &exitstatus);
+  //pthread_join(threads[RECEIVE_THREADNUM], &exitstatus);
+  //  pthread_join(threads[SEND_THREADNUM], &exitstatus);
+  //  pthread_join(threads[CHECKUP_THREADNUM], &exitstatus);
+}
+
+void join_chat(client_t* jointome, char* myip)
+{
+  create_message_threads();
+  int timestamp = (int)time(NULL);
+  char uid[MAXUIDLEN];
+  sprintf(uid,"%d^_^%d",timestamp,0);
+  char mylocation[MAXPACKETBODYLEN];
+  sprintf(mylocation,"%s:%d",myip,LOCALPORT);
+  send_UDP(JOIN_REQUEST,"i_not_leader",uid,mylocation,jointome);
 }
 
 int main(int argc, char* argv[]){
@@ -162,8 +173,49 @@ int main(int argc, char* argv[]){
   CLIENTS = (llist_t*) malloc(sizeof(llist_t));
   initialize_data_structures();
 
-  printf("I'm awake.\n");
+
   UIRUNNING = 0;
+
+  char* localport = argv[1];
+  char* runui = argv[argc-1];
+  printf("I'm awake.\n");
+
+  LOCALPORT = atoi(localport);
+  printf("I'm still awake.\n");
+
+  UIRUNNING = atoi(runui);
+  printf("I'm extra awake.\n");
+  LOCALHOSTNAME = "127.0.0.1";
+  if(argc == 5)
+  {
+    char* remoteip = argv[2];
+    char* remoteport = argv[3];
+    client_t* jointome = add_client("tickettostardom",remoteip,atoi(remoteport),TRUE);
+    join_chat(jointome,LOCALHOSTNAME);
+  }
+  else
+  {
+    if(LOCALPORT == 6000)
+    {
+      add_client("i_am_leader","127.0.0.1",5000,TRUE);
+      add_client("i_am_follower","127.0.0.1",6000,FALSE);
+      create_message_threads();
+      while(1);
+      return 0;
+    }
+
+    printf("I'm adding myself.\n");
+
+    add_client("i_am_leader",LOCALHOSTNAME,LOCALPORT,TRUE);
+    SEQ_NO = 0;
+    LEADER_SEQ_NO = 0;
+    printf("I'm starting my threads.\n");
+    add_client("i_am_follower","127.0.0.1",6000,FALSE);
+    create_message_threads();
+    while(1);
+    return 0;
+  }
+
 
   if(strcmp(argv[1],"5000"))
   {

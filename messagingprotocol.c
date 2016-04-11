@@ -150,6 +150,10 @@ void *receive_UDP(void* t)
 	  break;
 	case JOIN_REQUEST:
 	  //message from someone who wants to join
+	  
+	  //get the requester's ip and port
+	  //	  char marshalledaddresses[MAXPACKETBODYLEN];
+	  
 
 /*	  sendtoclient = (client_t*)malloc(sizeof(client_t));
 	  // declare hostname_add and portnum_add to be respectively those provided in the arguments
