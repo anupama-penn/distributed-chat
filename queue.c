@@ -41,7 +41,9 @@ queue_t *init(int (*cmp)(void *m1, void *m2), size_t init_capacity) {
 }
 
 void q_enqueue(queue_t *q, void *msg) {
+  pthread_mutex_lock(&q->mutex);
     if(q == NULL) {
+      pthread_mutex_unlock(&q->mutex);
       return;
     }
     if (q->num_elements >= q->capacity) {
@@ -58,42 +60,56 @@ void q_enqueue(queue_t *q, void *msg) {
         idx = getParent(idx);
     }
     q->num_elements++;
+  pthread_mutex_unlock(&q->mutex);
 }
 
 void *q_dequeue(queue_t *q) {
+  pthread_mutex_lock(&q->mutex);
     if(q == NULL) {
+      pthread_mutex_unlock(&q->mutex);
       return NULL;
     }
     if (q->num_elements < 1) {
+      pthread_mutex_unlock(&q->mutex);
       return NULL;
     }
     void *item = q->messages[0];
     q->messages[0] = q->messages[q->num_elements-1];
     q->num_elements--;
     heapify(q, 0);
+    pthread_mutex_unlock(&q->mutex);
     return (item);
 }
 
 void *q_peek(queue_t *q)
 {
+  pthread_mutex_lock(&q->mutex);
   if(q == NULL) {
+    pthread_mutex_unlock(&q->mutex);
     return NULL;
   }
   if (q->num_elements < 1) {
+    pthread_mutex_unlock(&q->mutex);
     return NULL;
   }
-  return q->messages[0];
+  void* returnval = q->messages[0];
+  pthread_mutex_unlock(&q->mutex);
+  return returnval;
 }
 
 void q_delete(queue_t *q) {
+  pthread_mutex_lock(&q->mutex);
     if (q != NULL) {
       free(q->messages);
       free(q);
     }
+  pthread_mutex_unlock(&q->mutex);
 }
 
 void heapify(queue_t *q, int index) {
+  pthread_mutex_lock(&q->mutex);
     if(q == NULL) {
+      pthread_mutex_unlock(&q->mutex);
       return;
     }
 
@@ -117,4 +133,5 @@ void heapify(queue_t *q, int index) {
       q->messages[index] = temp;
       heapify(q, max_index);
     }
+    pthread_mutex_unlock(&q->mutex);
 }

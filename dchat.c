@@ -107,6 +107,7 @@ void *checkup_on_clients(void* t)
     
     multicast_UDP(CHECKUP,me->username, uid, "ARE_YOU_ALIVE"); // multicast checkup message to everyone
 
+    pthread_mutex_lock(&CLIENTS->mutex);
     node_t* curr = CLIENTS->head;
     while(curr != NULL)
     {
@@ -115,12 +116,12 @@ void *checkup_on_clients(void* t)
 
       /*
       * Just for debugging purposes to see the current status of missed_checkups for each client
-      
+      */      
       printf("%s %s: %d %d\n",((client_t*)curr->elem)->username,
      ((client_t*)curr->elem)->hostname,
      ((client_t*)curr->elem)->portnum,
      ((client_t*)curr->elem)->missed_checkups);
-     */
+
 
       // check if anyone has missed too many checkups
       if (((client_t*)curr->elem)->missed_checkups > 4)
@@ -130,6 +131,7 @@ void *checkup_on_clients(void* t)
 
       curr = curr->next;
     }
+    pthread_mutex_unlock(&CLIENTS->mutex);
     counter++;
   }
   pthread_exit((void *)t);
@@ -190,8 +192,8 @@ int main(int argc, char* argv[]){
   {
     char* remoteip = argv[2];
     char* remoteport = argv[3];
-    client_t* jointome = add_client("tickettostardom",remoteip,atoi(remoteport),TRUE);
-    join_chat(jointome,LOCALHOSTNAME);
+    client_t* jointome = add_client("",remoteip,atoi(remoteport),TRUE);
+    //    join_chat(jointome,LOCALHOSTNAME);
   }
   else
   {
@@ -199,6 +201,8 @@ int main(int argc, char* argv[]){
     {
       add_client("i_am_leader","127.0.0.1",5000,TRUE);
       add_client("i_am_follower","127.0.0.1",6000,FALSE);
+      //      SEQ_NO = 0;
+      //      LEADER_SEQ_NO = 0;
       create_message_threads();
       while(1);
       return 0;
@@ -239,46 +243,4 @@ int main(int argc, char* argv[]){
   create_message_threads();
 
   return 0;
-  /*    pid_t pID = fork();
-    if (pID == 0) {
-        execlp("./dchat", NULL, (char*) 0);
-    }
-    sleep(5);
-    
-    int *result_send;
-    int *result_exit;
-    int *result_check;
-    
-    queue = queue_init(message_compare, QUEUE_SIZE);
-    
-
-    char * localhostname = (char*) malloc((size_t)INET_ADDRSTRLEN);
-    getLocalIp(localhostname);
-    
-    // create new chat or join one
-    if (argc == 3) {
-        char remoteHostname = argv[2];
-        printf("%s joining an existing chat on %s, listening on %s:%d \n",argv[1],remoteHostname,localhostname,LOCALPORT);
-    }
-    else{
-        printf("%s started a new chat, listening on %s:%d\n", argv[1], localHostname, LOCALPORT);
-        
-    }
-    
-    int isSequencer = 1;
-    
-    userdata.userName = (uname) argv[1];
-    userdata.hostname = (hoststr) localHostname;
-    userdata.lport = LOCALPORT;
-    userdata.leader_flag = isSequencer;
-n    
-    clientlist = malloc(sizeof(clist));
-    clientlist->clientlist.clientlist_len = 0;
-    alloc_clients_size = INITIAL_CLIENT_COUNT;
-    cname *list_values = (cname*)calloc((size_t)INITIAL_CLIENT_COUNT, sizeof(cname));
-
-    clientlist->clientlist.clientlist_val = list_values;
-    
-    llist_t* UNSEQ_CHAT_MSGS = (llist_t*) malloc(sizeof(llist_t));
-    init_list(UNSEQ_CHAT_MSGS);*/
 }

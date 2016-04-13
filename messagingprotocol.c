@@ -271,6 +271,7 @@ void send_UDP(packettype_t packettype, char sender[], char uid[], char messagebo
   //    exit(1);
   //  }
   
+  //  pthread_mutex_lock(&messaging_mutex);
   int messageindex = 0;
   int i = 0;
   for(i = 0; i < totalpacketsrequired; i++)
@@ -285,6 +286,7 @@ void send_UDP(packettype_t packettype, char sender[], char uid[], char messagebo
       exit(1);
     }
   }
+  //  pthread_mutex_unlock(&messaging_mutex);
 }
 
 void multicast_UDP(packettype_t packettype, char sender[], char uid[], char messagebody[]){
@@ -321,6 +323,7 @@ void multicast_UDP(packettype_t packettype, char sender[], char uid[], char mess
 	  exit(1);
 	}
 
+	//	pthread_mutex_lock(&messaging_mutex);
 	int messageindex = 0;
 	int i;
 	for(i = 0; i < totalpacketsrequired; i++)
@@ -335,6 +338,7 @@ void multicast_UDP(packettype_t packettype, char sender[], char uid[], char mess
             exit(1);
 	  }
 	}
+	//	pthread_mutex_unlock(&messaging_mutex);
 	curr = curr->next;
     }
     //close(fd);

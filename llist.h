@@ -1,4 +1,5 @@
 #pragma once
+#include<pthread.h>
 #include <stdlib.h>
 
 typedef struct node_t //for use in llist_t
@@ -13,6 +14,7 @@ typedef struct llist_t //doubly-linked list implementation
   struct node_t* head;
   struct node_t* tail;
   int numnodes;
+  pthread_mutex_t mutex;
 } llist_t;
 
 //initializes empty list
