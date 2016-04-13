@@ -48,7 +48,7 @@ void *receive_UDP(void* t)
         
         nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &addr,&addrlen);
         
-	//	printf("RECEIVED: %s\n",buf);
+	printf("RECEIVED: %s\n",buf);
 
         if (nbytes <0) {
             perror("recvfrom");

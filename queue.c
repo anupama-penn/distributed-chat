@@ -26,7 +26,7 @@ int getRightChild(int index) {
 
 queue_t *init(int (*cmp)(void *m1, void *m2), size_t init_capacity) {
     queue_t *q = NULL;
-    q = malloc(sizeof(*q));
+    q = malloc(sizeof(queue_t));
     if(cmp == NULL || q == NULL) {
       return NULL;
     }
@@ -60,7 +60,7 @@ void q_enqueue(queue_t *q, void *msg) {
         idx = getParent(idx);
     }
     q->num_elements++;
-  pthread_mutex_unlock(&q->mutex);
+    pthread_mutex_unlock(&q->mutex);
 }
 
 void *q_dequeue(queue_t *q) {
@@ -107,9 +107,7 @@ void q_delete(queue_t *q) {
 }
 
 void heapify(queue_t *q, int index) {
-  pthread_mutex_lock(&q->mutex);
     if(q == NULL) {
-      pthread_mutex_unlock(&q->mutex);
       return;
     }
 
@@ -133,5 +131,4 @@ void heapify(queue_t *q, int index) {
       q->messages[index] = temp;
       heapify(q, max_index);
     }
-    pthread_mutex_unlock(&q->mutex);
 }
