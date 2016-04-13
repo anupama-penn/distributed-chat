@@ -66,15 +66,20 @@ int message_compare(void* message1, void* message2)
 
 chatmessage_t* find_chatmessage(char uid[])
 {
+  pthread_mutex_lock(&UNSEQ_CHAT_MSGS->mutex);
   node_t* curr = UNSEQ_CHAT_MSGS->head;
   while(curr != NULL)
   {
     printf("SEQUENCE uid:%s\tMESSAGE uid:%s\n",uid,((chatmessage_t*)curr->elem)->uid);
     if(strcmp(uid, ((chatmessage_t*)curr->elem)->uid) == 0)
+    {
+      pthread_mutex_unlock(&UNSEQ_CHAT_MSGS->mutex);
       return ((chatmessage_t*)curr->elem);
+    }
     curr = curr->next;
   }
   //return null if it doesn't find what it's looking for
+  pthread_mutex_unlock(&UNSEQ_CHAT_MSGS->mutex);
   return NULL;
 }
 

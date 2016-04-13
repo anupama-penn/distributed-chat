@@ -41,14 +41,14 @@ void *receive_UDP(void* t)
         perror("bind");
         exit(1);
     }
-    
+    pthread_mutex_unlock(&messaging_mutex);//unlocks lock from create_message_threads
     
     while (1) {
         addrlen = sizeof(addr);
         
         nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &addr,&addrlen);
         
-	printf("RECEIVED: %s\n",buf);
+	//	printf("RECEIVED: %s\n",buf);
 
         if (nbytes <0) {
             perror("recvfrom");
@@ -120,26 +120,26 @@ void *receive_UDP(void* t)
 
 	  break;
 	case CHECKUP:
-    if (strcmp(newpacket->packetbody,"ARE_YOU_ALIVE") == 0)
-    {
-      // send udp message to sender saying that this client is still alive
-       // printf("I (%s) am gonna send alive response to (%s)\n", me->username, newpacket->sender);
-      
-      client_t* orig_sender = find_first_client_by_username(newpacket->sender);
-      send_UDP(CHECKUP, me->username, message->uid, "I_AM_ALIVE", orig_sender);
-    }
-    else if (strcmp(newpacket->packetbody, "I_AM_ALIVE") == 0)
-    {
-      // reset sender's counter back to zero
-     // printf("Got living confirmation from (%s)\n", newpacket->sender);
-
-      client_t* orig_sender = find_first_client_by_username(newpacket->sender);
-      orig_sender->missed_checkups = 0;
-    }
-    else
-    {
-      printf("\nUnrecognized value in checkup message!\n");
-    }
+	  if (strcmp(newpacket->packetbody,"ARE_YOU_ALIVE") == 0)
+	  {
+	    // send udp message to sender saying that this client is still alive
+	    // printf("I (%s) am gonna send alive response to (%s)\n", me->username, newpacket->sender);
+	    
+	    client_t* orig_sender = find_first_client_by_username(newpacket->sender);
+	    send_UDP(CHECKUP, me->username, message->uid, "I_AM_ALIVE", orig_sender);
+	  }
+	  else if (strcmp(newpacket->packetbody, "I_AM_ALIVE") == 0)
+	  {
+	    // reset sender's counter back to zero
+	    // printf("Got living confirmation from (%s)\n", newpacket->sender);
+	    
+	    client_t* orig_sender = find_first_client_by_username(newpacket->sender);
+	    orig_sender->missed_checkups = 0;
+	  }
+	  else
+	  {
+	    printf("\nUnrecognized value in checkup message!\n");
+	  }
     
 	  break;
 	case ELECTION:
@@ -271,7 +271,7 @@ void send_UDP(packettype_t packettype, char sender[], char uid[], char messagebo
   //    exit(1);
   //  }
   
-  //  pthread_mutex_lock(&messaging_mutex);
+  pthread_mutex_lock(&messaging_mutex);
   int messageindex = 0;
   int i = 0;
   for(i = 0; i < totalpacketsrequired; i++)
@@ -286,7 +286,7 @@ void send_UDP(packettype_t packettype, char sender[], char uid[], char messagebo
       exit(1);
     }
   }
-  //  pthread_mutex_unlock(&messaging_mutex);
+  pthread_mutex_unlock(&messaging_mutex);
 }
 
 void multicast_UDP(packettype_t packettype, char sender[], char uid[], char messagebody[]){
@@ -312,6 +312,7 @@ void multicast_UDP(packettype_t packettype, char sender[], char uid[], char mess
     char packetbuf[MAXPACKETLEN];
 
     //    printf("total packets required: %d\n", totalpacketsrequired);
+    pthread_mutex_lock(&messaging_mutex);
     while(curr != NULL)
     {
         memset(&addr, 0, sizeof(addr));
@@ -323,7 +324,7 @@ void multicast_UDP(packettype_t packettype, char sender[], char uid[], char mess
 	  exit(1);
 	}
 
-	//	pthread_mutex_lock(&messaging_mutex);
+
 	int messageindex = 0;
 	int i;
 	for(i = 0; i < totalpacketsrequired; i++)
@@ -338,9 +339,10 @@ void multicast_UDP(packettype_t packettype, char sender[], char uid[], char mess
             exit(1);
 	  }
 	}
-	//	pthread_mutex_unlock(&messaging_mutex);
+
 	curr = curr->next;
     }
+    pthread_mutex_unlock(&messaging_mutex);
     //close(fd);
 }
 

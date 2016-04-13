@@ -14,10 +14,8 @@ bool initialize_data_structures() {
     
   init_list(CLIENTS);
   init_list(UNSEQ_CHAT_MSGS);
-  HBACK_Q = init(message_compare,100);
+  HBACK_Q = init(message_compare,1000);
 
-  //  INITIALIZED = TRUE;
-  //  return INITIALIZED;
   return TRUE;
 }
 
@@ -49,7 +47,7 @@ void shutdown(){
 n    
     destroy_data_structures();
     exit(0);
-    return NULL;
+check    return NULL;
 }
 
 */
@@ -116,12 +114,12 @@ void *checkup_on_clients(void* t)
 
       /*
       * Just for debugging purposes to see the current status of missed_checkups for each client
-      */      
+
       printf("%s %s: %d %d\n",((client_t*)curr->elem)->username,
      ((client_t*)curr->elem)->hostname,
      ((client_t*)curr->elem)->portnum,
      ((client_t*)curr->elem)->missed_checkups);
-
+      */      
 
       // check if anyone has missed too many checkups
       if (((client_t*)curr->elem)->missed_checkups > 4)
@@ -149,7 +147,10 @@ void create_message_threads()
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
   //start a thread for each
+  pthread_mutex_lock(&messaging_mutex); //This gets unlocked in receive_UDP
   pthread_create(&threads[RECEIVE_THREADNUM], &attr, receive_UDP, (void *)RECEIVE_THREADNUM);
+  pthread_mutex_lock(&messaging_mutex); //Can only get this lock if receive_UDP has unlocked it
+  pthread_mutex_unlock(&messaging_mutex);
   pthread_create(&threads[SEND_THREADNUM], &attr, get_user_input, (void *)SEND_THREADNUM);
   pthread_create(&threads[CHECKUP_THREADNUM], &attr, checkup_on_clients, (void *)CHECKUP_THREADNUM);
 
@@ -193,7 +194,7 @@ int main(int argc, char* argv[]){
     char* remoteip = argv[2];
     char* remoteport = argv[3];
     client_t* jointome = add_client("",remoteip,atoi(remoteport),TRUE);
-    //    join_chat(jointome,LOCALHOSTNAME);
+    join_chat(jointome,LOCALHOSTNAME);
   }
   else
   {
@@ -213,9 +214,10 @@ int main(int argc, char* argv[]){
     add_client("i_am_leader",LOCALHOSTNAME,LOCALPORT,TRUE);
     SEQ_NO = 0;
     LEADER_SEQ_NO = 0;
+    add_client("i_am_follower","127.0.0.1",6000,FALSE); //hardcoded
     printf("I'm starting my threads.\n");
-    add_client("i_am_follower","127.0.0.1",6000,FALSE);
     create_message_threads();
+    printf("I've started my threads.\n");
     while(1);
     return 0;
   }
