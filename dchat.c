@@ -198,7 +198,7 @@ int main(int argc, char* argv[]){
   }
   else
   {
-    if(LOCALPORT == 6000)
+    /*    if(LOCALPORT == 6000)
     {
       add_client("i_am_leader","127.0.0.1",5000,TRUE);
       add_client("i_am_follower","127.0.0.1",6000,FALSE);
@@ -207,7 +207,7 @@ int main(int argc, char* argv[]){
       create_message_threads();
       while(1);
       return 0;
-    }
+      }*/
 
     printf("I'm adding myself.\n");
 
