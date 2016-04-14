@@ -23,7 +23,6 @@ chatmessage_t* process_packet(chatmessage_t* message, packet_t* newpacket)
     message = create_chatmessage(newpacket);
     add_elem(UNSEQ_CHAT_MSGS, (void*)message);
   }
-  printf("created? %d\n",message==NULL);
   return message;
 }
 
@@ -172,10 +171,10 @@ void *receive_UDP(void* t)
 	  
 	  //get the requester's ip and port
 
-	  printf("JOIN_REQUEST packet: %s\n",newpacket->packetbody);
+	  //	  printf("JOIN_REQUEST packet: %s\n",newpacket->packetbody);
 	  strcpy(newip,strtok(newpacket->packetbody,":"));
 	  newport = atoi(strtok(NULL,IPPORTSTRDELIM));
-	  printf("newip: %s\t newport: %d\n",newip,newport);
+	  //	  printf("newip: %s\t newport: %d\n",newip,newport);
 	  client_t* newguy = create_client(newpacket->sender,newip,newport,FALSE);
 
 	  char marshalledaddresses[MAXPACKETBODYLEN];
@@ -200,7 +199,7 @@ void *receive_UDP(void* t)
 	    curr = curr->next;
 	  }
 	  pthread_mutex_unlock(&CLIENTS->mutex);
-	  printf("JOIN info:\t%s\n",marshalledaddresses);
+	  //	  printf("JOIN info:\t%s\n",marshalledaddresses);
 
 	  char uid[MAXUIDLEN];
 	  get_new_uid(uid);
@@ -240,7 +239,7 @@ void *receive_UDP(void* t)
 	  if(message->iscomplete)
 	  {
 	    //announcement that someone has successfully joined
-	    printf("SOMEBODY JOINING!\t%s\n",message->messagebody);
+	    //	    printf("SOMEBODY JOINING!\t%s\n",message->messagebody);
 
 	    //read the first one off first
 	    strcpy(newusername,strtok(message->messagebody,":"));
@@ -259,16 +258,11 @@ void *receive_UDP(void* t)
 		    if(newusertest == NULL)
 		      break;
 		    strcpy(newusername,newusertest);
-		    printf("user %s\n",newusername);
 		    strcpy(newip,strtok(NULL,":"));
-		    printf("ip %s\n",newip);
 		    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
-		    printf("port %d\n",newport);
 		    add_client(newusername,newip,newport,FALSE);
-		    printf("added a client\n");
 		  }
 	      }
-	    printf("SOMEBODY JOINED!\t%s\n",message->messagebody);
 	  }
 
 	  if(message->iscomplete && me->isleader)
