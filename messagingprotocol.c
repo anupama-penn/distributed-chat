@@ -29,9 +29,11 @@ chatmessage_t* process_packet(chatmessage_t* message, packet_t* newpacket)
 void sequence_message(chatmessage_t* message)
 {
   char seqnum[5];
+  pthread_mutex_lock(&seqno_mutex);
   sprintf(seqnum,"%d",LEADER_SEQ_NO);
   multicast_UDP(SEQUENCE,me->username,message->uid,seqnum);
   LEADER_SEQ_NO++;
+  pthread_mutex_unlock(&seqno_mutex);
 }
 
 void *receive_UDP(void* t)
@@ -108,6 +110,7 @@ void *receive_UDP(void* t)
 	  remove_elem(UNSEQ_CHAT_MSGS,(void*)message);
 	  q_enqueue(HBACK_Q,(void*)message);
 	  chatmessage_t* firstmessage = (chatmessage_t*)q_peek(HBACK_Q);
+	  pthread_mutex_lock(&seqno_mutex);
 	  if(firstmessage->messagetype == JOIN && SEQ_NO == -1) //my first message to display!
 	  {
 	    SEQ_NO = firstmessage->seqnum;
@@ -133,6 +136,7 @@ void *receive_UDP(void* t)
 	    print_msg_with_senderids(firstmessage->sender,firstmessage->messagebody, hostname, portnum);
 	    q_dequeue(HBACK_Q);
 	  }
+	  pthread_mutex_unlock(&seqno_mutex);
 
 	  //check if the front of the queue corresponds to our expected current sequence no. If so, print it. If not, we should wait or eventually ping the leader for it.
 

@@ -104,6 +104,7 @@ int LEADER_SEQ_NO;
 
 int UID_COUNTER; 
 pthread_mutex_t counter_mutex;
+pthread_mutex_t seqno_mutex;
 
 //int LOCALPORT = DEFAULTPORT;
 //static bool INITIALIZED = FALSE;
