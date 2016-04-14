@@ -201,6 +201,7 @@ int main(int argc, char* argv[]){
   UID_COUNTER = 0;
   if(argc == 5)
   {
+    SEQ_NO = -1;
     char* remoteip = argv[2];
     char* remoteport = argv[3];
     client_t* jointome = create_client("",remoteip,atoi(remoteport),TRUE);

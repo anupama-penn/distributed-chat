@@ -11,6 +11,30 @@ packet_t* parsePacket(char* buf){
   return input;
 }
 
+
+chatmessage_t* process_packet(chatmessage_t* message, packet_t* newpacket)
+{
+  //if so, and if the message is not complete, add this packet's contents to it
+  //if not, create a new chatmessage
+  if(message)
+    append_to_chatmessage(message, newpacket);
+  else
+  {
+    message = create_chatmessage(newpacket);
+    add_elem(UNSEQ_CHAT_MSGS, (void*)message);
+  }
+  printf("created? %d\n",message==NULL);
+  return message;
+}
+
+void sequence_message(chatmessage_t* message)
+{
+  char seqnum[5];
+  sprintf(seqnum,"%d",LEADER_SEQ_NO);
+  multicast_UDP(SEQUENCE,me->username,message->uid,seqnum);
+  LEADER_SEQ_NO++;
+}
+
 void *receive_UDP(void* t)
 {
     
@@ -57,42 +81,25 @@ void *receive_UDP(void* t)
 
 	packet_t* newpacket = parsePacket(buf);
 	chatmessage_t* message;
-	bool completed = FALSE;
-	client_t* sendtoclient;
 	char newusername[MAXSENDERLEN];
 	char newip[MAXPACKETBODYLEN];
 	int newport;
-	char* parsablemsgbody;
 	//figure out what type of packet this is and act accordingly
 	switch(newpacket->packettype)
 	{
 	case CHAT:
+
 	  //figure out if this corresponds to an existing chatmessage
 	  message = find_chatmessage(newpacket->uid);
+	  message = process_packet(message,newpacket);
 
-	  //if so, and if the message is not complete, add this packet's contents to it
-	  //if not, create a new chatmessage
-	  if(message)
-	    completed = append_to_chatmessage(message, newpacket);
-	  else
-	  {
-	    message = create_chatmessage(newpacket);
-	    completed = message->iscomplete;
-	    add_elem(UNSEQ_CHAT_MSGS, (void*)message);
-	  }
+	  if(message->iscomplete && me->isleader)
+	    sequence_message(message);
 
 	  //for now, just print if it's complete
-	  if(completed)
+	  if(message->iscomplete)
 	    printf("\E[33m%s\E(B\E[m (not sequenced):\t%s\n", message->sender, message->messagebody);
 
-	  //if am the leader, prep and send a sequencing message for this chatmessage
-	  if(me->isleader)
-	  {
-	    char seqnum[5];
-	    sprintf(seqnum,"%d",LEADER_SEQ_NO);
-	    multicast_UDP(SEQUENCE,me->username,message->uid,seqnum);
-	    LEADER_SEQ_NO++;
-	  }
 	  break;
 	case SEQUENCE:
 	  //This is a sequencing message. Find the corresponding chat message in the unsequenced message list and enqueue it properly
@@ -102,10 +109,19 @@ void *receive_UDP(void* t)
 	  remove_elem(UNSEQ_CHAT_MSGS,(void*)message);
 	  q_enqueue(HBACK_Q,(void*)message);
 	  chatmessage_t* firstmessage = (chatmessage_t*)q_peek(HBACK_Q);
+	  if(firstmessage->messagetype == JOIN && SEQ_NO == -1) //my first message to display!
+	  {
+	    SEQ_NO = firstmessage->seqnum;
+	  }
 	  if(firstmessage->seqnum <= SEQ_NO)
 	  {
 	    SEQ_NO = firstmessage->seqnum + 1;
-	    printf("\E[34m%s\E(B\E[m (sequenced: %d):\t%s\n", firstmessage->sender, firstmessage->seqnum,firstmessage->messagebody);
+	    if(firstmessage->messagetype == CHAT)
+	      printf("\E[34m%s\E(B\E[m (sequenced: %d):\t%s\n", firstmessage->sender, firstmessage->seqnum,firstmessage->messagebody);
+	    else
+	    {
+	      printf("\E[34m%s\E(B\E[m joined the chat (sequenced: %d)\n", firstmessage->messagebody, firstmessage->seqnum);
+	    }
 	    client_t* firstclientmatchbyname = find_first_client_by_username(firstmessage->sender);
 	    char* hostname = "";
 
@@ -216,37 +232,49 @@ void *receive_UDP(void* t)
 	  //If you receive this, repeat the JOIN_REQUEST, but to the leader. 
 	  break;
 	case JOIN:
-	  //announcement that someone has successfully joined
-	  printf("SOMEBODY JOINING!\t%s\n",newpacket->packetbody);
 
-	  //read the first one off first
-	  strcpy(newusername,strtok(newpacket->packetbody,":"));
-	  strcpy(newip,strtok(NULL,":"));
-	  newport = atoi(strtok(NULL,IPPORTSTRDELIM));
-	  
-	  client_t* newclient = add_client(newusername,newip,newport,FALSE);
+	  //figure out if this corresponds to an existing chatmessage
+	  message = find_chatmessage(newpacket->uid);
+	  message = process_packet(message,newpacket);
 
-	  if(newport == LOCALPORT && strcmp(LOCALHOSTNAME,newip) == 0) //then I'm the guy who just joined
+	  if(message->iscomplete)
 	  {
-	    me = newclient;
+	    //announcement that someone has successfully joined
+	    printf("SOMEBODY JOINING!\t%s\n",message->messagebody);
 
-	    while(1)
-	    {
-	      char* newusertest = strtok(NULL,":");
-	      if(newusertest == NULL)
-		break;
-	      strcpy(newusername,newusertest);
-	      printf("user %s\n",newusername);
-	      strcpy(newip,strtok(NULL,":"));
-	      printf("ip %s\n",newip);
-	      newport = atoi(strtok(NULL,IPPORTSTRDELIM));
-	      printf("port %d\n",newport);
-	      add_client(newusername,newip,newport,FALSE);
-	      printf("added a client\n");
-	    }
+	    //read the first one off first
+	    strcpy(newusername,strtok(message->messagebody,":"));
+	    strcpy(newip,strtok(NULL,":"));
+	    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
+	  
+	    client_t* newclient = add_client(newusername,newip,newport,FALSE);
+
+	    if(newport == LOCALPORT && strcmp(LOCALHOSTNAME,newip) == 0) //then I'm the guy who just joined
+	      {
+		me = newclient;
+
+		while(1)
+		  {
+		    char* newusertest = strtok(NULL,":");
+		    if(newusertest == NULL)
+		      break;
+		    strcpy(newusername,newusertest);
+		    printf("user %s\n",newusername);
+		    strcpy(newip,strtok(NULL,":"));
+		    printf("ip %s\n",newip);
+		    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
+		    printf("port %d\n",newport);
+		    add_client(newusername,newip,newport,FALSE);
+		    printf("added a client\n");
+		  }
+	      }
+	    printf("SOMEBODY JOINED!\t%s\n",message->messagebody);
 	  }
-	  printf("SOMEBODY JOINED!\t%s\n",newpacket->packetbody);
 
+	  if(message->iscomplete && me->isleader)
+	    sequence_message(message);
+
+	  
 	  break;
 	default:
 	  printf("\nUnrecognized packet type: %d\n", newpacket->packettype);

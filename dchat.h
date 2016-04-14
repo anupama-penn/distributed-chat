@@ -63,6 +63,7 @@ typedef struct packet_t {
 } packet_t;
 
 typedef struct chatmessage_t {
+  packettype_t messagetype;
   int seqnum;
   int numpacketsexpected;
   bool iscomplete;

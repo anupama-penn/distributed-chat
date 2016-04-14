@@ -16,6 +16,7 @@ bool check_chatmessage_completeness(chatmessage_t* message)
 chatmessage_t* create_chatmessage(packet_t* newpacket)
 {
   chatmessage_t* message = malloc(sizeof(chatmessage_t));
+  message->messagetype = newpacket->packettype;
   message->seqnum = -1;
   message->numpacketsexpected = newpacket->totalpackets;
   message->iscomplete = FALSE;
