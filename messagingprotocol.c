@@ -1,4 +1,5 @@
 #include "messagingprotocol.h"
+#include "clientmanagement.h"
 
 packet_t* parsePacket(char* buf){
   packet_t* input = malloc(sizeof(packet_t));
@@ -240,7 +241,10 @@ void *receive_UDP(void* t)
 	    }
 	    curr = curr->next;
 	    }*/
+
 	  break;
+	case EXIT:
+		remove_client(me->hostname,me->portnum);
 	case LEADER_INFO:
 	  //if someone asked to join, but they didn't ask the leader, instead of sending a JOIN, send them this. 
 	  //If you receive this, repeat the JOIN_REQUEST, but to the leader. 
