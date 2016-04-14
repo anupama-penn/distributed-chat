@@ -35,7 +35,18 @@ void sequence_message(chatmessage_t* message)
   LEADER_SEQ_NO++;
   pthread_mutex_unlock(&seqno_mutex);
 }
-
+void exit_chat(chatmessage_t* message){
+    
+    char buffer[10];
+    fgets(buffer,10,stdin);
+    
+    if ((int) strtol(buffer,NULL,10) == 0) {
+        // now that ctrl+d has been pressed , do this
+        
+        multicast_UDP(EXIT,me->username,message->uid, NULL);
+        
+    }
+}
 void *receive_UDP(void* t)
 {
     
