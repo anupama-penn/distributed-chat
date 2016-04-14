@@ -74,6 +74,7 @@ void *get_user_input(void* t)
   {
     while(1)
     {
+      printf("userinput: ");
       fgets(userinput, sizeof(userinput), stdin);
       if(userinput[0] == '\n')
 	continue;
@@ -155,7 +156,7 @@ void create_message_threads()
   pthread_create(&threads[CHECKUP_THREADNUM], &attr, checkup_on_clients, (void *)CHECKUP_THREADNUM);
 
   //pthread_join(threads[RECEIVE_THREADNUM], &exitstatus);
-  //  pthread_join(threads[SEND_THREADNUM], &exitstatus);
+  //pthread_join(threads[SEND_THREADNUM], &exitstatus);
   //  pthread_join(threads[CHECKUP_THREADNUM], &exitstatus);
 }
 
@@ -167,6 +168,7 @@ void join_chat(client_t* jointome, char* myip)
   sprintf(uid,"%d^_^%d",timestamp,0);
   char mylocation[MAXPACKETBODYLEN];
   sprintf(mylocation,"%s:%d",myip,LOCALPORT);
+  printf("Sending JOIN_REQUEST %s to %s:%d\n", mylocation, jointome->hostname, jointome->portnum);
   send_UDP(JOIN_REQUEST,"i_not_leader",uid,mylocation,jointome);
 }
 
@@ -193,8 +195,10 @@ int main(int argc, char* argv[]){
   {
     char* remoteip = argv[2];
     char* remoteport = argv[3];
-    client_t* jointome = add_client("",remoteip,atoi(remoteport),TRUE);
+    client_t* jointome = create_client("",remoteip,atoi(remoteport),TRUE);
     join_chat(jointome,LOCALHOSTNAME);
+    while(1);
+    return 0;
   }
   else
   {
@@ -214,7 +218,7 @@ int main(int argc, char* argv[]){
     add_client("i_am_leader",LOCALHOSTNAME,LOCALPORT,TRUE);
     SEQ_NO = 0;
     LEADER_SEQ_NO = 0;
-    add_client("i_am_follower","127.0.0.1",6000,FALSE); //hardcoded
+    //    add_client("i_am_follower","127.0.0.1",6000,FALSE); //hardcoded
     printf("I'm starting my threads.\n");
     create_message_threads();
     printf("I've started my threads.\n");
@@ -222,7 +226,7 @@ int main(int argc, char* argv[]){
     return 0;
   }
 
-
+  /*
   if(strcmp(argv[1],"5000"))
   {
     LOCALPORT = 6000;
@@ -243,6 +247,6 @@ int main(int argc, char* argv[]){
   SEQ_NO = 0;
   LEADER_SEQ_NO = 0;
   create_message_threads();
-
+*/
   return 0;
 }

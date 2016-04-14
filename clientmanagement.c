@@ -19,14 +19,19 @@ void print_client_list() {
   }
 }
 
-
-client_t* add_client(char username[], char hostname[], int portnum, bool isleader)
+client_t* create_client(char username[], char hostname[], int portnum, bool isleader)
 {
   client_t* newclient = (client_t*)malloc(sizeof(client_t));
   strcpy(newclient->username,username);
   strcpy(newclient->hostname,hostname);
   newclient->portnum = portnum;
   newclient->isleader = isleader;
+  return newclient;
+}
+
+client_t* add_client(char username[], char hostname[], int portnum, bool isleader)
+{
+  client_t* newclient = create_client(username,hostname,portnum,isleader);
   if(portnum==LOCALPORT && strcmp(hostname,LOCALHOSTNAME) == 0)
   {
     me = newclient;

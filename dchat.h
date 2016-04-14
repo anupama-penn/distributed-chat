@@ -39,6 +39,7 @@
 #define CHECKUP_INTERVAL 1
 
 #define PACKETDELIM "\n"
+#define IPPORTSTRDELIM ":"
 
 #define DEFAULTPORT 2886
 

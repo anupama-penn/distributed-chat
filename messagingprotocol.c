@@ -48,7 +48,7 @@ void *receive_UDP(void* t)
         
         nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &addr,&addrlen);
         
-	//	printf("RECEIVED: %s\n",buf);
+	//printf("RECEIVED: %s\n",buf);
 
         if (nbytes <0) {
             perror("recvfrom");
@@ -59,7 +59,9 @@ void *receive_UDP(void* t)
 	chatmessage_t* message;
 	bool completed = FALSE;
 	client_t* sendtoclient;
-	
+	char newip[MAXPACKETBODYLEN];
+	int newport;
+	char* parsablemsgbody;
 	//figure out what type of packet this is and act accordingly
 	switch(newpacket->packettype)
 	{
@@ -152,7 +154,15 @@ void *receive_UDP(void* t)
 	  //message from someone who wants to join
 	  
 	  //get the requester's ip and port
-	  //	  char marshalledaddresses[MAXPACKETBODYLEN];
+
+	  printf("JOIN_REQUEST packet: %s\n",newpacket->packetbody);
+	  strcpy(newip,strtok(newpacket->packetbody,":"));
+	  newport = atoi(strtok(NULL,IPPORTSTRDELIM));
+	  printf("newip: %s\t newport: %d\t",newip,newport);
+	  client_t* newguy = create_client("newguy",newip,newport,FALSE);
+
+	  //char marshalledaddresses[MAXPACKETBODYLEN];
+	  
 	  
 
 /*	  sendtoclient = (client_t*)malloc(sizeof(client_t));
@@ -171,8 +181,8 @@ void *receive_UDP(void* t)
 	      add_elem(UNSEQ_CHAT_MSGS,(void*)sendtoclient);
 	    }
 	    curr = curr->next;
-	  }
-	  break; */
+	    }*/
+	  break;
 	case LEADER_INFO:
 	  //if someone asked to join, but they didn't ask the leader, instead of sending a JOIN, send them this. 
 	  //If you receive this, repeat the JOIN_REQUEST, but to the leader. 
@@ -184,7 +194,6 @@ void *receive_UDP(void* t)
 	default:
 	  printf("\nUnrecognized packet type: %d\n", newpacket->packettype);
 	}
-
 
 	//begin sequencing stuff from 
 	/*
