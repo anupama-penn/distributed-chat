@@ -3,6 +3,7 @@
 #include "clientmanagement.h"
 #include "messagemanagement.h"
 
+#include <ifaddrs.h>
 void error(char *x){
   perror(x);
   exit(1);
@@ -164,6 +165,31 @@ void create_message_threads()
   //pthread_join(threads[RECEIVE_THREADNUM], &exitstatus);
   //pthread_join(threads[SEND_THREADNUM], &exitstatus);
   //  pthread_join(threads[CHECKUP_THREADNUM], &exitstatus);
+}
+void discover_ip(){
+
+    struct ifaddrs * ifAddrStruct = NULL;
+    struct ifaddrs * ifa=NULL;
+
+    char host[NI_MAXHOST];
+    int s ;
+
+    getifaddrs(&ifAddrStruct);
+
+    for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next)
+    {
+        s = getnameinfo(ifa->ifa_addr,sizeof(struct sockaddr_in),host,NI_MAXHOST,NULL,0,NI_NUMERICHOST);
+
+        //replace en0 with em1 interface in spec/eniac
+
+        if (ifa->ifa_addr->sa_family == AF_INET && strcmp(ifa->ifa_name,"en0") == 0) {
+
+            printf("\t  Address : %s\n", host);
+            printf("\t Interface : <%s>\n",ifa->ifa_name );
+
+        }
+    }
+    if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
 }
 
 void join_chat(client_t* jointome, char* myip)
