@@ -158,12 +158,34 @@ void *receive_UDP(void* t)
 	  printf("JOIN_REQUEST packet: %s\n",newpacket->packetbody);
 	  strcpy(newip,strtok(newpacket->packetbody,":"));
 	  newport = atoi(strtok(NULL,IPPORTSTRDELIM));
-	  printf("newip: %s\t newport: %d\t",newip,newport);
+	  printf("newip: %s\t newport: %d\n",newip,newport);
 	  client_t* newguy = create_client("newguy",newip,newport,FALSE);
 
-	  //char marshalledaddresses[MAXPACKETBODYLEN];
+	  char marshalledaddresses[MAXPACKETBODYLEN];
 	  
-	  
+	  strcpy(marshalledaddresses,newguy->hostname);
+	  char portbuf[10];
+	  sprintf(portbuf,":%d",newguy->portnum);
+	  strcat(marshalledaddresses,portbuf);
+	  pthread_mutex_lock(&CLIENTS->mutex);
+	  node_t* curr = CLIENTS->head;
+	  while(curr != NULL)
+	  {
+	    strcat(marshalledaddresses,":");
+	    strcat(marshalledaddresses,((client_t*)curr->elem)->hostname);
+	    //	    char portbuf[10];
+	    sprintf(portbuf,":%d",((client_t*)curr->elem)->portnum);
+	    strcat(marshalledaddresses,portbuf);
+	    curr = curr->next;
+	  }
+	  pthread_mutex_unlock(&CLIENTS->mutex);
+	  printf("JOIN info:\t%s\n",marshalledaddresses);
+
+	  char uid[MAXUIDLEN];
+	  get_new_uid(uid);
+
+	  send_UDP(JOIN,me->username,uid,marshalledaddresses,newguy);
+	  free(newguy);
 
 /*	  sendtoclient = (client_t*)malloc(sizeof(client_t));
 	  // declare hostname_add and portnum_add to be respectively those provided in the arguments
@@ -189,6 +211,7 @@ void *receive_UDP(void* t)
 	  break;
 	case JOIN:
 	  //announcement that someone has successfully joined
+	  printf("SOMEBODY JOINED!\t%s\n",newpacket->packetbody);
 
 	  break;
 	default:

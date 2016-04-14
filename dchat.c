@@ -52,12 +52,20 @@ check    return NULL;
 
 */
 
+void get_new_uid(char uid[])
+{
+  pthread_mutex_lock(&counter_mutex);
+  int timestamp = (int)time(NULL);
+  sprintf(uid,"%d(^_^)%d",timestamp,UID_COUNTER);
+  UID_COUNTER++;
+  pthread_mutex_unlock(&counter_mutex);
+}
+
 void send_chat_message(int counter, char userinput[])
 {
    char* sendstr = strdup(userinput);
-   int timestamp = (int)time(NULL);
    char uid[MAXUIDLEN];
-   sprintf(uid,"%d^_^%d",timestamp,counter);
+   get_new_uid(uid);
    multicast_UDP(CHAT,me->username, uid, sendstr);
    free(sendstr);
 }
@@ -100,10 +108,8 @@ void *checkup_on_clients(void* t)
   {
     sleep(CHECKUP_INTERVAL); // Interval between checkups
     
-    int timestamp = (int)time(NULL);
     char uid[MAXUIDLEN];
-    sprintf(uid,"%d^_^%d",timestamp,counter);
-    
+    get_new_uid(uid);
     multicast_UDP(CHECKUP,me->username, uid, "ARE_YOU_ALIVE"); // multicast checkup message to everyone
 
     pthread_mutex_lock(&CLIENTS->mutex);
@@ -170,6 +176,7 @@ void join_chat(client_t* jointome, char* myip)
   sprintf(mylocation,"%s:%d",myip,LOCALPORT);
   printf("Sending JOIN_REQUEST %s to %s:%d\n", mylocation, jointome->hostname, jointome->portnum);
   send_UDP(JOIN_REQUEST,"i_not_leader",uid,mylocation,jointome);
+  free(jointome);
 }
 
 int main(int argc, char* argv[]){
@@ -191,6 +198,7 @@ int main(int argc, char* argv[]){
   UIRUNNING = atoi(runui);
   printf("I'm extra awake.\n");
   LOCALHOSTNAME = "127.0.0.1";
+  UID_COUNTER = 0;
   if(argc == 5)
   {
     char* remoteip = argv[2];

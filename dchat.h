@@ -101,12 +101,17 @@ char* LOCALHOSTNAME;
 int SEQ_NO; 
 int LEADER_SEQ_NO; 
 
+int UID_COUNTER; 
+pthread_mutex_t counter_mutex;
+
 //int LOCALPORT = DEFAULTPORT;
 //static bool INITIALIZED = FALSE;
 
 // Function Declarations
 
 void error(char*);
+
+void get_new_uid(char uid[]);
 
 void *get_user_input(void* t);
 
