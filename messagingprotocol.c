@@ -59,6 +59,7 @@ void *receive_UDP(void* t)
 	chatmessage_t* message;
 	bool completed = FALSE;
 	client_t* sendtoclient;
+	char newusername[MAXSENDERLEN];
 	char newip[MAXPACKETBODYLEN];
 	int newport;
 	char* parsablemsgbody;
@@ -159,11 +160,13 @@ void *receive_UDP(void* t)
 	  strcpy(newip,strtok(newpacket->packetbody,":"));
 	  newport = atoi(strtok(NULL,IPPORTSTRDELIM));
 	  printf("newip: %s\t newport: %d\n",newip,newport);
-	  client_t* newguy = create_client("newguy",newip,newport,FALSE);
+	  client_t* newguy = create_client(newpacket->sender,newip,newport,FALSE);
 
 	  char marshalledaddresses[MAXPACKETBODYLEN];
 	  
-	  strcpy(marshalledaddresses,newguy->hostname);
+	  strcpy(marshalledaddresses,newguy->username);
+	  strcat(marshalledaddresses,":");
+	  strcat(marshalledaddresses,newguy->hostname);
 	  char portbuf[10];
 	  sprintf(portbuf,":%d",newguy->portnum);
 	  strcat(marshalledaddresses,portbuf);
@@ -171,6 +174,8 @@ void *receive_UDP(void* t)
 	  node_t* curr = CLIENTS->head;
 	  while(curr != NULL)
 	  {
+	    strcat(marshalledaddresses,":");
+	    strcat(marshalledaddresses,((client_t*)curr->elem)->username);
 	    strcat(marshalledaddresses,":");
 	    strcat(marshalledaddresses,((client_t*)curr->elem)->hostname);
 	    //	    char portbuf[10];
@@ -185,6 +190,7 @@ void *receive_UDP(void* t)
 	  get_new_uid(uid);
 
 	  send_UDP(JOIN,me->username,uid,marshalledaddresses,newguy);
+	  multicast_UDP(JOIN,me->username,uid,marshalledaddresses);
 	  free(newguy);
 
 /*	  sendtoclient = (client_t*)malloc(sizeof(client_t));
@@ -211,6 +217,34 @@ void *receive_UDP(void* t)
 	  break;
 	case JOIN:
 	  //announcement that someone has successfully joined
+	  printf("SOMEBODY JOINING!\t%s\n",newpacket->packetbody);
+
+	  //read the first one off first
+	  strcpy(newusername,strtok(newpacket->packetbody,":"));
+	  strcpy(newip,strtok(NULL,":"));
+	  newport = atoi(strtok(NULL,IPPORTSTRDELIM));
+	  
+	  client_t* newclient = add_client(newusername,newip,newport,FALSE);
+
+	  if(newport == LOCALPORT && strcmp(LOCALHOSTNAME,newip) == 0) //then I'm the guy who just joined
+	  {
+	    me = newclient;
+
+	    while(1)
+	    {
+	      char* newusertest = strtok(NULL,":");
+	      if(newusertest == NULL)
+		break;
+	      strcpy(newusername,newusertest);
+	      printf("user %s\n",newusername);
+	      strcpy(newip,strtok(NULL,":"));
+	      printf("ip %s\n",newip);
+	      newport = atoi(strtok(NULL,IPPORTSTRDELIM));
+	      printf("port %d\n",newport);
+	      add_client(newusername,newip,newport,FALSE);
+	      printf("added a client\n");
+	    }
+	  }
 	  printf("SOMEBODY JOINED!\t%s\n",newpacket->packetbody);
 
 	  break;

@@ -159,7 +159,7 @@ void create_message_threads()
   pthread_mutex_lock(&messaging_mutex); //Can only get this lock if receive_UDP has unlocked it
   pthread_mutex_unlock(&messaging_mutex);
   pthread_create(&threads[SEND_THREADNUM], &attr, get_user_input, (void *)SEND_THREADNUM);
-  pthread_create(&threads[CHECKUP_THREADNUM], &attr, checkup_on_clients, (void *)CHECKUP_THREADNUM);
+  //  pthread_create(&threads[CHECKUP_THREADNUM], &attr, checkup_on_clients, (void *)CHECKUP_THREADNUM);
 
   //pthread_join(threads[RECEIVE_THREADNUM], &exitstatus);
   //pthread_join(threads[SEND_THREADNUM], &exitstatus);
