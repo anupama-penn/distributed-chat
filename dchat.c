@@ -252,16 +252,12 @@ int main(int argc, char* argv[]){
       while(1);
       return 0;
       }*/
-
-    printf("I'm adding myself.\n");
-
     add_client(username,LOCALHOSTNAME,LOCALPORT,TRUE);
     SEQ_NO = 0;
     LEADER_SEQ_NO = 0;
     //    add_client("i_am_follower","127.0.0.1",6000,FALSE); //hardcoded
-    printf("I'm starting my threads.\n");
     create_message_threads();
-    printf("I've started my threads.\n");
+    print_info_with_senderids(username,"has created a new chat session",LOCALHOSTNAME,LOCALPORT);
     while(1);
     return 0;
   }
