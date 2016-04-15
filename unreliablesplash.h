@@ -18,16 +18,6 @@
 
 #define SYSCALL_THREADNUM 0
 
-typedef struct uimessage_t
-{
-  char* username;
-  char* hostname;
-  int portnum;
-  char* message;
-  int numlines;
-  int maxwidth;
-} uimessage_t;
-
 typedef struct window_t
 {
   WINDOW* window;
@@ -42,10 +32,22 @@ typedef struct user_t
 {
   int usernum;
   char* username;
+  char* hostname;
+  int portnum;
 } user_t;
 
-pthread_mutex_t disp_mutex;
+typedef struct uimessage_t
+{
+  user_t* user;
+  char* message;
+  int numlines;
+  int maxwidth;
+} uimessage_t;
 
+pthread_mutex_t disp_mutex;
+pthread_mutex_t initui_mutex;
+
+llist_t* USERS;
 llist_t* MSGS;
 llist_t* INFOS;
 
@@ -54,13 +56,15 @@ node_t* LAST_INFO_NODE;
 
 int showhelp;
 
-char MY_MSG[1024];
+char MY_MSG[10240];
 int MY_MSG_INDEX;
 
 char* uihostname;
 int uiport;
 
 int UIRUNNING;
+
+int USERNUM;
 
 int r;
 int c;
@@ -80,6 +84,7 @@ int focusindex;
 void initui(int isdebug);
 void print_msg(char* user, char message[]);
 void print_info(char* user, char message[]);
+user_t* find_user_by_hostname_port(char hostname[], int port);
 void print_msg_with_senderids(char* user, char message[], char hostname[], int portnum);
 uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist, int append, char hostname[], int portnum);
 void setborder(window_t* wnd);

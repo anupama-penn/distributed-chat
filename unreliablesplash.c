@@ -180,6 +180,32 @@ void *splashcurses(void *t)
   //  wrefresh(splashwnd->window);
 }
 
+user_t* add_user(char* username, char hostname[], int port)
+{
+  user_t* newuser = (user_t*)malloc(sizeof(user_t));
+  newuser->username = (char*)malloc(sizeof(char)*100);
+  newuser->hostname = (char*)malloc(sizeof(char)*20);
+  newuser->usernum = USERNUM;
+  strcpy(newuser->username,username);
+  strcpy(newuser->hostname,hostname);
+  newuser->portnum = port;
+  add_elem(USERS,newuser);
+  USERNUM++;
+  return newuser;
+}
+
+user_t* find_user_by_hostname_port(char hostname[], int port)
+{
+  node_t* curr = USERS->head;
+  while(curr != NULL)
+  {
+    user_t* elem = (user_t*)curr->elem;
+    if(strcmp(elem->hostname,hostname) == 0 && port == elem->portnum)
+      return elem;
+    curr = curr->next;
+  }
+  return NULL;
+}
 
 uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist, int append, char hostname[], int portnum)
 {
@@ -213,7 +239,15 @@ uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist
     maxwidth = strlen(message);
   }
 
-  if(msglist->tail != NULL && strcmp(((uimessage_t*)msglist->tail->elem)->hostname,hostname) == 0 && ((uimessage_t*)msglist->tail->elem)->portnum == portnum && append)
+  //get associated user
+  user_t* msguser = find_user_by_hostname_port(hostname,portnum);
+  if(msguser == NULL)
+  {
+    msguser = add_user(user,hostname,portnum);
+    printf("Added new user\n");
+  }
+
+  if(msglist->tail != NULL && ((uimessage_t*)msglist->tail->elem)->user == msguser && append)
   {
     char* prevmsg = ((uimessage_t*)msglist->tail->elem)->message;
     char* combinedmsg = (char*)malloc(sizeof(char)*(strlen(msglines)+strlen(prevmsg)+1));
@@ -230,15 +264,10 @@ uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist
   else
   {
     uimessage_t* newmessage = (uimessage_t*)malloc(sizeof(uimessage_t));
-    char* msghostname = (char*)malloc(sizeof(char));
-    newmessage->username = user;
-    //    newmessage->userid = 1;
+    newmessage->user = msguser;
     newmessage->message = msglines;
     newmessage->numlines = numlines;
     newmessage->maxwidth = maxwidth;
-    strcpy(msghostname,hostname);
-    newmessage->hostname = msghostname;
-    newmessage->portnum = portnum;
     return newmessage;
   }
 
@@ -265,7 +294,7 @@ void print_msgs()
     int namestart = start-6;
     int color = 1;
     //    int namestart = 4;
-    if(strcmp(uimsg->hostname,uihostname) == 0 && uimsg->portnum == uiport)
+    if(strcmp(uimsg->user->hostname,uihostname) == 0 && uimsg->user->portnum == uiport)
     //    if(strcmp("Me", uimsg->username) == 0)
     {
       //      if(curr == MSGS->tail)
@@ -342,7 +371,7 @@ void print_msgs()
     //      break;
     wattron(msgwnd->window,A_BOLD);
     if(linenum > 0)
-      mvwaddstr(msgwnd->window,linenum, namestart, uimsg->username);
+      mvwaddstr(msgwnd->window,linenum, namestart, uimsg->user->username);
     wattroff(msgwnd->window,A_BOLD);
     if(linenum <= 0)
     {
@@ -484,7 +513,7 @@ void print_infos()
   {
     uimessage_t* uimsg = (uimessage_t*)(curr->elem);
     int namestart = 2;
-    int start = namestart+1+strlen(uimsg->username);
+    int start = namestart+1+strlen(uimsg->user->username);
     int color = 1;
 
     pthread_mutex_lock(&disp_mutex);
@@ -517,7 +546,7 @@ void print_infos()
     //    pthread_mutex_lock(&disp_mutex);
     wattron(infownd->window,COLOR_PAIR(color));    
     wattron(infownd->window,A_BOLD);
-      mvwaddstr(infownd->window,linenum, namestart, uimsg->username);
+      mvwaddstr(infownd->window,linenum, namestart, uimsg->user->username);
     wattroff(infownd->window,A_BOLD);
     if(linenum <= 0)
     {
@@ -566,7 +595,10 @@ void print_msg_with_senderids(char* user, char message[], char hostname[], int p
     printf("%s:\t%s\n",user,message);
     return;
   }
+  pthread_mutex_lock(&initui_mutex);
+  pthread_mutex_unlock(&initui_mutex);
   uimessage_t* newmessage = add_msg_with_senderids(user,message,MSGS,1,hostname,portnum);
+  printf("Added new msg\n");
   if(newmessage)
   {
     int end = LAST_MSG_NODE == MSGS->tail;
@@ -777,10 +809,14 @@ void initui(int isdebug)
   if(isdebug)
     return;
 
+  USERNUM = 0;
+
   //  MY_MSG = (char*)malloc(sizeof(char));
   MY_MSG_INDEX = 0;
+  USERS = (llist_t*)malloc(sizeof(llist_t));
   MSGS = (llist_t*)malloc(sizeof(llist_t));
   INFOS = (llist_t*)malloc(sizeof(llist_t));
+  init_list(USERS);
   init_list(MSGS);
   init_list(INFOS);
   LAST_MSG_NODE = MSGS->tail;
@@ -841,11 +877,11 @@ void initui(int isdebug)
 
   //  pthread_create(&threads[SYSCALL_THREADNUM], &attr, spoof_chats, (void *)SYSCALL_THREADNUM);
   pthread_create(&threads[1], &attr, splashcurses, (void *)1);
-  pthread_create(&threads[2], &attr, spoof_updates, (void *)2);
+  //  pthread_create(&threads[2], &attr, spoof_updates, (void *)2);
 
   //  pthread_join(threads[SYSCALL_THREADNUM], &exitstatus);
 
-
+  pthread_mutex_unlock(&initui_mutex);
   int counter = 0;
   while(1)
   {
