@@ -184,6 +184,22 @@ void *splashcurses(void *t)
   //  wrefresh(splashwnd->window);
 }
 
+int get_color(uimessage_t* uimsg)
+{
+  int color = 0;
+  if(strcmp(uimsg->user->hostname,uihostname) == 0 && uimsg->user->portnum == uiport)
+  {
+    color = 3;
+  }
+  else
+  {
+    color = (uimsg->user->usernum % 6) + 1;
+    if(color == 3)
+      color = 7;
+  }
+  return color;
+}
+
 user_t* add_user(char* username, char hostname[], int port)
 {
   user_t* newuser = (user_t*)malloc(sizeof(user_t));
@@ -299,26 +315,11 @@ void print_msgs()
     int color = 1;
     //    int namestart = 4;
     if(strcmp(uimsg->user->hostname,uihostname) == 0 && uimsg->user->portnum == uiport)
-    //    if(strcmp("Me", uimsg->username) == 0)
     {
-      //      if(curr == MSGS->tail)
-      //      {
-      //	wprintw(infownd->window,"%d\n",uimsg->maxwidth);
-      //	wrefresh(infownd->window);
-      //      }
-      color = 3;
       start = msgwnd->ncols-4-uimsg->maxwidth;
-      //      start = msgwnd->ncols/2;
       namestart = start-6;
-      //      namestart = msgwnd->ncols/2 + namestart;
-      //      namestart = msgwnd->ncols-2-strlen(uimsg->username);
     }
-    else
-    {
-      color = (uimsg->user->usernum % 6) + 1;
-      if(color == 3)
-	color = 7;
-    }
+    color = get_color(uimsg);
 
     pthread_mutex_lock(&disp_mutex);
     int i = 0;
@@ -524,7 +525,7 @@ void print_infos()
     uimessage_t* uimsg = (uimessage_t*)(curr->elem);
     int namestart = 2;
     int start = namestart+1+strlen(uimsg->user->username);
-    int color = 1;
+    int color = get_color(uimsg);
 
     pthread_mutex_lock(&disp_mutex);
     int i = 0;
