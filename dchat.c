@@ -134,6 +134,10 @@ void *checkup_on_clients(void* t)
       {
         printf("I (%s) believe that (%s) is dead :)\n", me->username, ((client_t*)curr->elem)->username);
       }
+      if (((client_t*)curr->elem)->missed_checkups == 4)
+      {
+	print_info_with_senderids(((client_t*)curr->elem)->username,"has gone offline",((client_t*)curr->elem)->hostname,((client_t*)curr->elem)->portnum);
+      }
 
       curr = curr->next;
     }

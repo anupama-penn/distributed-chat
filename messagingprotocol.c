@@ -153,7 +153,7 @@ void *receive_UDP(void* t)
 	    if(firstmessage->messagetype == CHAT)
 	      print_msg_with_senderids(firstmessage->sender,firstmessage->messagebody, hostname, portnum);
 	    else if(firstmessage->messagetype == JOIN)
-	      print_info_with_senderids(firstmessage->messagebody,"joined the chat",hostname,portnum);
+	      print_info_with_senderids(firstmessage->messagebody,"has joined the chat",hostname,portnum);
 	    q_dequeue(HBACK_Q);
 	  }
 	  pthread_mutex_unlock(&seqno_mutex);
@@ -279,6 +279,7 @@ void *receive_UDP(void* t)
 	      {
 		me = newclient;
 
+		int usernum = 1;
 		while(1)
 		  {
 		    char* newusertest = strtok(NULL,":");
@@ -288,7 +289,11 @@ void *receive_UDP(void* t)
 		    strcpy(newip,strtok(NULL,":"));
 		    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
 		    add_client(newusername,newip,newport,FALSE);
+		    if(usernum == 1)
+		      print_info_with_senderids(newusername,"has approved your join request",newip,newport);
+		    usernum++;
 		  }
+
 	      }
 	  }
 
