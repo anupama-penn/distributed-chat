@@ -257,6 +257,8 @@ uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist
     strcpy(msglines,&message[lo]);
     strcat(msglines,"\n");
     maxwidth = strlen(message);
+    if(strlen(user) > maxwidth)
+      maxwidth = strlen(user);
   }
 
   //get associated user
