@@ -130,13 +130,18 @@ void *receive_UDP(void* t)
 	  if(firstmessage->seqnum <= SEQ_NO)
 	  {
 	    SEQ_NO = firstmessage->seqnum + 1;
+	    client_t* firstclientmatchbyname;
 	    if(firstmessage->messagetype == CHAT)
+	    {
 	      printf("\E[34m%s\E(B\E[m (sequenced: %d):\t%s\n", firstmessage->sender, firstmessage->seqnum,firstmessage->messagebody);
+	      firstclientmatchbyname = find_first_client_by_username(firstmessage->sender);
+	    }
 	    else
 	    {
 	      printf("\E[34m%s\E(B\E[m joined the chat (sequenced: %d)\n", firstmessage->messagebody, firstmessage->seqnum);
+	      firstclientmatchbyname = find_first_client_by_username(firstmessage->messagebody);
 	    }
-	    client_t* firstclientmatchbyname = find_first_client_by_username(firstmessage->sender);
+
 	    char* hostname = "";
 
 	    int portnum = -1;
@@ -145,7 +150,10 @@ void *receive_UDP(void* t)
 	      hostname = firstclientmatchbyname->hostname;
 	      portnum = firstclientmatchbyname->portnum;
 	    }
-	    print_msg_with_senderids(firstmessage->sender,firstmessage->messagebody, hostname, portnum);
+	    if(firstmessage->messagetype == CHAT)
+	      print_msg_with_senderids(firstmessage->sender,firstmessage->messagebody, hostname, portnum);
+	    else if(firstmessage->messagetype == JOIN)
+	      print_info_with_senderids(firstmessage->messagebody,"joined the chat",hostname,portnum);
 	    q_dequeue(HBACK_Q);
 	  }
 	  pthread_mutex_unlock(&seqno_mutex);

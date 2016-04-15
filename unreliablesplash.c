@@ -32,6 +32,10 @@ void *splashcurses(void *t)
   init_pair(2, COLOR_CYAN, COLOR_BLACK);
   init_pair(3, COLOR_YELLOW, COLOR_BLACK);
   init_pair(4, COLOR_WHITE, COLOR_BLACK);
+  init_pair(5, COLOR_RED, COLOR_BLACK);
+  init_pair(6, COLOR_MAGENTA, COLOR_BLACK);
+  init_pair(7, COLOR_GREEN, COLOR_BLACK);
+
   pthread_mutex_lock(&disp_mutex);
   wattron(splashwnd->window,COLOR_PAIR(1));
   wattron(splashwnd->window,A_BOLD);
@@ -308,6 +312,12 @@ void print_msgs()
       namestart = start-6;
       //      namestart = msgwnd->ncols/2 + namestart;
       //      namestart = msgwnd->ncols-2-strlen(uimsg->username);
+    }
+    else
+    {
+      color = (uimsg->user->usernum % 6) + 1;
+      if(color == 3)
+	color = 7;
     }
 
     pthread_mutex_lock(&disp_mutex);
@@ -611,7 +621,19 @@ void print_msg_with_senderids(char* user, char message[], char hostname[], int p
 
 void print_info(char* user, char message[])
 {
-  uimessage_t* newmessage = add_msg(user,message,INFOS,0);
+  print_info_with_senderids(user, message, "", -1);
+}
+
+void print_info_with_senderids(char* user, char message[], char hostname[], int portnum)
+{
+  if(!UIRUNNING)
+  {
+    printf("%s:\t%s\n",user,message);
+    return;
+  }
+  pthread_mutex_lock(&initui_mutex);
+  pthread_mutex_unlock(&initui_mutex);
+  uimessage_t* newmessage = add_msg_with_senderids(user,message,INFOS,0,hostname,portnum);
   if(newmessage)
   {
     int end = LAST_INFO_NODE == INFOS->tail;
@@ -808,6 +830,7 @@ void initui(int isdebug)
 
   if(isdebug)
     return;
+
 
   USERNUM = 0;
 

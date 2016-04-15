@@ -86,5 +86,7 @@ void print_msg(char* user, char message[]);
 void print_info(char* user, char message[]);
 user_t* find_user_by_hostname_port(char hostname[], int port);
 void print_msg_with_senderids(char* user, char message[], char hostname[], int portnum);
-uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist, int append, char hostname[], int portnum);
+uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist, int append, char hostname[
+], int portnum);
+void print_info_with_senderids(char* user, char message[], char hostname[], int portnum);
 void setborder(window_t* wnd);

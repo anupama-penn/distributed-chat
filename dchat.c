@@ -161,7 +161,6 @@ void create_message_threads()
   pthread_create(&threads[RECEIVE_THREADNUM], &attr, receive_UDP, (void *)RECEIVE_THREADNUM);
   pthread_mutex_lock(&messaging_mutex); //Can only get this lock if receive_UDP has unlocked it
   pthread_mutex_unlock(&messaging_mutex);
-  //
   //  pthread_create(&threads[CHECKUP_THREADNUM], &attr, checkup_on_clients, (void *)CHECKUP_THREADNUM);
 
   //pthread_join(threads[RECEIVE_THREADNUM], &exitstatus);
@@ -194,7 +193,7 @@ void discover_ip(){
     if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
 }
 
-void join_chat(client_t* jointome, char* myip)
+void join_chat(client_t* jointome, char* myip, char username[])
 {
   create_message_threads();
   int timestamp = (int)time(NULL);
@@ -203,7 +202,7 @@ void join_chat(client_t* jointome, char* myip)
   char mylocation[MAXPACKETBODYLEN];
   sprintf(mylocation,"%s:%d",myip,LOCALPORT);
   printf("Sending JOIN_REQUEST %s to %s:%d\n", mylocation, jointome->hostname, jointome->portnum);
-  send_UDP(JOIN_REQUEST,"i_not_leader",uid,mylocation,jointome);
+  send_UDP(JOIN_REQUEST,username,uid,mylocation,jointome);
   free(jointome);
 }
 
@@ -215,6 +214,10 @@ int main(int argc, char* argv[]){
 
 
   UIRUNNING = 0;
+
+  printf("ENTER USERNAME: ");
+  char username[MAXSENDERLEN];
+  scanf("%s",username);
 
   char* localport = argv[1];
   char* runui = argv[argc-1];
@@ -233,7 +236,7 @@ int main(int argc, char* argv[]){
     char* remoteip = argv[2];
     char* remoteport = argv[3];
     client_t* jointome = create_client("",remoteip,atoi(remoteport),TRUE);
-    join_chat(jointome,LOCALHOSTNAME);
+    join_chat(jointome,LOCALHOSTNAME,username);
     while(1);
     return 0;
   }
@@ -252,7 +255,7 @@ int main(int argc, char* argv[]){
 
     printf("I'm adding myself.\n");
 
-    add_client("i_am_leader",LOCALHOSTNAME,LOCALPORT,TRUE);
+    add_client(username,LOCALHOSTNAME,LOCALPORT,TRUE);
     SEQ_NO = 0;
     LEADER_SEQ_NO = 0;
     //    add_client("i_am_follower","127.0.0.1",6000,FALSE); //hardcoded
