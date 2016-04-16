@@ -266,8 +266,8 @@ void *receive_UDP(void* t)
 	  newport = atoi(strtok(NULL,IPPORTSTRDELIM));
 	  //	  printf("newip: %s\t newport: %d\n",newip,newport);
 	  client_t* newguy = create_client(newpacket->sender,newip,newport,FALSE);
-
-	  char marshalledaddresses[MAXPACKETBODYLEN];
+	  
+	  char marshalledaddresses[MAXCHATMESSAGELEN];
 	  
 	  strcpy(marshalledaddresses,newguy->username);
 	  strcat(marshalledaddresses,":");
