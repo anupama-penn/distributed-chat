@@ -8,6 +8,7 @@
 pthread_mutex_t messaging_mutex;
 
 packet_t* parsePacket(char*);
+void freePacket(packet_t* packet);
 void *receive_UDP(void* t);
 void multicast_UDP(packettype_t packettype, char sender[], char uid[], char messagebody[]);
 chatmessage_t* process_packet(chatmessage_t* message, packet_t* newpacket);

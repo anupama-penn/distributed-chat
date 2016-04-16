@@ -12,6 +12,15 @@ packet_t* parsePacket(char* buf){
   return input;
 }
 
+void freePacket(packet_t* packet)
+{
+  free(packet->sender);
+  free(packet->uid);
+  free(packet->packetbody);
+  free(packet);
+  return;
+}
+
 
 chatmessage_t* process_packet(chatmessage_t* message, packet_t* newpacket)
 {
@@ -113,6 +122,7 @@ void *receive_UDP(void* t)
 	  if(message->iscomplete)
 	    printf("\E[33m%s\E(B\E[m (not sequenced):\t%s\n", message->sender, message->messagebody);
 
+	  free(newpacket);
 	  break;
 	case SEQUENCE:
 	  //This is a sequencing message. Find the corresponding chat message in the unsequenced message list and enqueue it properly
@@ -183,12 +193,19 @@ void *receive_UDP(void* t)
 	    printf("\nUnrecognized value in checkup message!\n");
 	  }
     
+	  free(newpacket);
 	  break;
 	case ELECTION:
+
+	  free(newpacket);
 	  break;
 	case VOTE:
+
+	  free(newpacket);
 	  break;
 	case VICTORY:
+
+	  free(newpacket);
 	  break;
 	case JOIN_REQUEST:
 	  //message from someone who wants to join
@@ -249,13 +266,15 @@ void *receive_UDP(void* t)
 	    }
 	    curr = curr->next;
 	    }*/
-
+	  free(newpacket);
 	  break;
 	case EXIT:
 		remove_client(me->hostname,me->portnum);
 	case LEADER_INFO:
 	  //if someone asked to join, but they didn't ask the leader, instead of sending a JOIN, send them this. 
 	  //If you receive this, repeat the JOIN_REQUEST, but to the leader. 
+
+	  free(newpacket);
 	  break;
 	case JOIN:
 
@@ -301,9 +320,11 @@ void *receive_UDP(void* t)
 	    sequence_message(message);
 
 	  
+	  free(newpacket);
 	  break;
 	default:
 	  printf("\nUnrecognized packet type: %d\n", newpacket->packettype);
+	  free(newpacket);
 	}
 
 	//begin sequencing stuff from 

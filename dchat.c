@@ -152,7 +152,7 @@ void create_message_threads()
   int numthreads = 3;
   pthread_t threads[numthreads];
   pthread_attr_t attr;
-  void *exitstatus;
+  //  void *exitstatus;
   
   //make sure threads are joinable
   pthread_attr_init(&attr);
