@@ -12,11 +12,11 @@ packet_t* parsePacket(char* buf){
   return input;
 }
 
-void freePacket(packet_t* packet)
+void free_packet(packet_t* packet)
 {
-  free(packet->sender);
-  free(packet->uid);
-  free(packet->packetbody);
+  //  free(packet->sender);
+  //free(packet->uid);
+  ///free(packet->packetbody);
   free(packet);
   return;
 }
@@ -36,7 +36,7 @@ chatmessage_t* process_packet(chatmessage_t* message, packet_t* newpacket)
   return message;
 }
 
-void sequence_message(chatmessage_t* message)
+void assign_sequence(chatmessage_t* message)
 {
   char seqnum[5];
   pthread_mutex_lock(&seqno_mutex);
@@ -45,6 +45,7 @@ void sequence_message(chatmessage_t* message)
   LEADER_SEQ_NO++;
   pthread_mutex_unlock(&seqno_mutex);
 }
+
 void exit_chat(chatmessage_t* message){
     
     char buffer[10];
@@ -57,6 +58,79 @@ void exit_chat(chatmessage_t* message){
         
     }
 }
+
+
+void sequence(chatmessage_t* message, packet_t* newpacket)
+{
+  message->seqnum = atoi(newpacket->packetbody);
+  remove_elem(UNSEQ_CHAT_MSGS,(void*)message);
+  q_enqueue(HBACK_Q,(void*)message);
+  chatmessage_t* firstmessage = (chatmessage_t*)q_peek(HBACK_Q);
+  pthread_mutex_lock(&seqno_mutex);
+  if(firstmessage->messagetype == JOIN && SEQ_NO == -1) //my first message to display!
+  {
+    SEQ_NO = firstmessage->seqnum;
+  }
+  if(firstmessage->seqnum <= SEQ_NO)
+  {
+    SEQ_NO = firstmessage->seqnum + 1;
+    client_t* firstclientmatchbyname;
+    if(firstmessage->messagetype == CHAT)
+    {
+      printf("\E[34m%s\E(B\E[m (sequenced: %d):\t%s\n", firstmessage->sender, firstmessage->seqnum,firstmessage->messagebody);
+      firstclientmatchbyname = find_first_client_by_username(firstmessage->sender);
+    }
+    else
+    {
+      printf("\E[34m%s\E(B\E[m joined the chat (sequenced: %d)\n", firstmessage->messagebody, firstmessage->seqnum);
+      firstclientmatchbyname = find_first_client_by_username(firstmessage->messagebody);
+    }
+
+    char* hostname = "";
+    int portnum = -1;
+	    
+    if(firstclientmatchbyname != NULL)
+    {
+      hostname = firstclientmatchbyname->hostname;
+      portnum = firstclientmatchbyname->portnum;
+    }
+    if(firstmessage->messagetype == CHAT)
+      print_msg_with_senderids(firstmessage->sender,firstmessage->messagebody, hostname, portnum);
+    else if(firstmessage->messagetype == JOIN)
+      print_info_with_senderids(firstmessage->messagebody,"has joined the chat",hostname,portnum);
+    q_dequeue(HBACK_Q);
+  }
+  pthread_mutex_unlock(&seqno_mutex);
+
+  return;
+}
+
+void process_late_sequence(chatmessage_t* message, packet_t* newpacket)
+{
+  pthread_mutex_lock(&STRAY_SEQ_MSGS->mutex);
+  node_t* curr = STRAY_SEQ_MSGS->head;
+  packet_t* seqpacket = NULL;
+  bool founddeqpacket = FALSE;
+  while(curr != NULL)
+  {
+    seqpacket = (packet_t*)curr->elem;
+    if(seqpacket->uid == newpacket->uid)
+    {
+      founddeqpacket = TRUE;
+      break;
+    }
+    curr = curr->next;
+  }
+  pthread_mutex_unlock(&STRAY_SEQ_MSGS->mutex);
+  if(founddeqpacket)
+  {
+    remove_elem(STRAY_SEQ_MSGS,seqpacket);
+    sequence(message, seqpacket);
+  }
+  return;
+}
+
+
 void *receive_UDP(void* t)
 {
     
@@ -106,6 +180,7 @@ void *receive_UDP(void* t)
 	char newusername[MAXSENDERLEN];
 	char newip[MAXPACKETBODYLEN];
 	int newport;
+	node_t* curr = STRAY_SEQ_MSGS->head;
 	//figure out what type of packet this is and act accordingly
 	switch(newpacket->packettype)
 	{
@@ -116,60 +191,34 @@ void *receive_UDP(void* t)
 	  message = process_packet(message,newpacket);
 
 	  if(message->iscomplete && me->isleader)
-	    sequence_message(message);
+	    assign_sequence(message);
 
 	  //for now, just print if it's complete
 	  if(message->iscomplete)
 	    printf("\E[33m%s\E(B\E[m (not sequenced):\t%s\n", message->sender, message->messagebody);
 
-	  free(newpacket);
+	  //check the stray sequencing list. If there's already something in there that matches, remove it and add the message to the priority queue.
+	  process_late_sequence(message, newpacket);
+
+	  free_packet(newpacket);
 	  break;
 	case SEQUENCE:
 	  //This is a sequencing message. Find the corresponding chat message in the unsequenced message list and enqueue it properly
 	  message = find_chatmessage(newpacket->uid);
 	  //If the corresponding message is not complete, ask the leader for its missing part first. It will be received as a chat. TODO
-	  message->seqnum = atoi(newpacket->packetbody);
-	  remove_elem(UNSEQ_CHAT_MSGS,(void*)message);
-	  q_enqueue(HBACK_Q,(void*)message);
-	  chatmessage_t* firstmessage = (chatmessage_t*)q_peek(HBACK_Q);
-	  pthread_mutex_lock(&seqno_mutex);
-	  if(firstmessage->messagetype == JOIN && SEQ_NO == -1) //my first message to display!
+	  //if no message is found, put this sequencing packet in the stray sequencing list
+	  if(message == NULL)
 	  {
-	    SEQ_NO = firstmessage->seqnum;
+	    add_elem(STRAY_SEQ_MSGS,newpacket);
+	    break;
 	  }
-	  if(firstmessage->seqnum <= SEQ_NO)
-	  {
-	    SEQ_NO = firstmessage->seqnum + 1;
-	    client_t* firstclientmatchbyname;
-	    if(firstmessage->messagetype == CHAT)
-	    {
-	      printf("\E[34m%s\E(B\E[m (sequenced: %d):\t%s\n", firstmessage->sender, firstmessage->seqnum,firstmessage->messagebody);
-	      firstclientmatchbyname = find_first_client_by_username(firstmessage->sender);
-	    }
-	    else
-	    {
-	      printf("\E[34m%s\E(B\E[m joined the chat (sequenced: %d)\n", firstmessage->messagebody, firstmessage->seqnum);
-	      firstclientmatchbyname = find_first_client_by_username(firstmessage->messagebody);
-	    }
 
-	    char* hostname = "";
+	  sequence(message, newpacket);
 
-	    int portnum = -1;
-	    if(firstclientmatchbyname != NULL)
-	    {
-	      hostname = firstclientmatchbyname->hostname;
-	      portnum = firstclientmatchbyname->portnum;
-	    }
-	    if(firstmessage->messagetype == CHAT)
-	      print_msg_with_senderids(firstmessage->sender,firstmessage->messagebody, hostname, portnum);
-	    else if(firstmessage->messagetype == JOIN)
-	      print_info_with_senderids(firstmessage->messagebody,"has joined the chat",hostname,portnum);
-	    q_dequeue(HBACK_Q);
-	  }
-	  pthread_mutex_unlock(&seqno_mutex);
 
 	  //check if the front of the queue corresponds to our expected current sequence no. If so, print it. If not, we should wait or eventually ping the leader for it.
 
+	  free_packet(newpacket);
 	  break;
 	case CHECKUP:
 	  if (strcmp(newpacket->packetbody,"ARE_YOU_ALIVE") == 0)
@@ -193,7 +242,7 @@ void *receive_UDP(void* t)
 	    printf("\nUnrecognized value in checkup message!\n");
 	  }
     
-	  free(newpacket);
+	  free_packet(newpacket);
 	  break;
 	case ELECTION:
 
@@ -201,11 +250,11 @@ void *receive_UDP(void* t)
 	  break;
 	case VOTE:
 
-	  free(newpacket);
+	  free_packet(newpacket);
 	  break;
 	case VICTORY:
 
-	  free(newpacket);
+	  free_packet(newpacket);
 	  break;
 	case JOIN_REQUEST:
 	  //message from someone who wants to join
@@ -227,7 +276,7 @@ void *receive_UDP(void* t)
 	  sprintf(portbuf,":%d",newguy->portnum);
 	  strcat(marshalledaddresses,portbuf);
 	  pthread_mutex_lock(&CLIENTS->mutex);
-	  node_t* curr = CLIENTS->head;
+	  curr = CLIENTS->head;
 	  while(curr != NULL)
 	  {
 	    strcat(marshalledaddresses,":");
@@ -266,7 +315,7 @@ void *receive_UDP(void* t)
 	    }
 	    curr = curr->next;
 	    }*/
-	  free(newpacket);
+	  free_packet(newpacket);
 	  break;
 	case EXIT:
 		remove_client(me->hostname,me->portnum);
@@ -274,7 +323,7 @@ void *receive_UDP(void* t)
 	  //if someone asked to join, but they didn't ask the leader, instead of sending a JOIN, send them this. 
 	  //If you receive this, repeat the JOIN_REQUEST, but to the leader. 
 
-	  free(newpacket);
+	  free_packet(newpacket);
 	  break;
 	case JOIN:
 
@@ -317,14 +366,15 @@ void *receive_UDP(void* t)
 	  }
 
 	  if(message->iscomplete && me->isleader)
-	    sequence_message(message);
+	    assign_sequence(message);
 
+	  process_late_sequence(message, newpacket);
 	  
-	  free(newpacket);
+	  free_packet(newpacket);
 	  break;
 	default:
 	  printf("\nUnrecognized packet type: %d\n", newpacket->packettype);
-	  free(newpacket);
+	  free_packet(newpacket);
 	}
 
 	//begin sequencing stuff from 

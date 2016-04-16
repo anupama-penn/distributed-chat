@@ -13,8 +13,12 @@ void error(char *x){
 
 bool initialize_data_structures() {
     
+  UNSEQ_CHAT_MSGS = (llist_t*) malloc(sizeof(llist_t));
+  CLIENTS = (llist_t*) malloc(sizeof(llist_t));
+  STRAY_SEQ_MSGS = (llist_t*) malloc(sizeof(llist_t));
   init_list(CLIENTS);
   init_list(UNSEQ_CHAT_MSGS);
+  init_list(STRAY_SEQ_MSGS);
   HBACK_Q = init(message_compare,1000);
 
   return TRUE;
@@ -212,8 +216,6 @@ void join_chat(client_t* jointome, char* myip, char username[])
 
 int main(int argc, char* argv[]){
     
-  UNSEQ_CHAT_MSGS = (llist_t*) malloc(sizeof(llist_t));
-  CLIENTS = (llist_t*) malloc(sizeof(llist_t));
   initialize_data_structures();
 
 

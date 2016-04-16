@@ -95,6 +95,7 @@ typedef struct client_t {
 
 llist_t* UNSEQ_CHAT_MSGS;
 llist_t* CLIENTS;
+llist_t* STRAY_SEQ_MSGS;
 queue_t* HBACK_Q; 
 client_t* me;
 int LOCALPORT;
