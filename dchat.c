@@ -201,29 +201,14 @@ void discover_ip(){
     if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
 }
 
-void join_chat(client_t* jointome, char* myip, char username[])
-{
-  create_message_threads();
-  int timestamp = (int)time(NULL);
-  char uid[MAXUIDLEN];
-  sprintf(uid,"%d^_^%d",timestamp,0);
-  char mylocation[MAXPACKETBODYLEN];
-  sprintf(mylocation,"%s:%d",myip,LOCALPORT);
-  printf("Sending JOIN_REQUEST %s to %s:%d\n", mylocation, jointome->hostname, jointome->portnum);
-  send_UDP(JOIN_REQUEST,username,uid,mylocation,jointome);
-  free(jointome);
-}
-
 int main(int argc, char* argv[]){
     
   initialize_data_structures();
 
-
   UIRUNNING = 0;
 
   printf("ENTER USERNAME: ");
-  char username[MAXSENDERLEN];
-  scanf("%s",username);
+  scanf("%s",LOCALUSERNAME);
 
   char* localport = argv[1];
   char* runui = argv[argc-1];
@@ -242,7 +227,8 @@ int main(int argc, char* argv[]){
     char* remoteip = argv[2];
     char* remoteport = argv[3];
     client_t* jointome = create_client("",remoteip,atoi(remoteport),TRUE);
-    join_chat(jointome,LOCALHOSTNAME,username);
+    create_message_threads();
+    join_chat(jointome);
     while(1);
     return 0;
   }
@@ -258,12 +244,12 @@ int main(int argc, char* argv[]){
       while(1);
       return 0;
       }*/
-    add_client(username,LOCALHOSTNAME,LOCALPORT,TRUE);
+    add_client(LOCALUSERNAME,LOCALHOSTNAME,LOCALPORT,TRUE);
     SEQ_NO = 0;
     LEADER_SEQ_NO = 0;
     //    add_client("i_am_follower","127.0.0.1",6000,FALSE); //hardcoded
     create_message_threads();
-    print_info_with_senderids(username,"has created a new chat session",LOCALHOSTNAME,LOCALPORT);
+    print_info_with_senderids(LOCALUSERNAME,"has created a new chat session",LOCALHOSTNAME,LOCALPORT);
     while(1);
     return 0;
   }

@@ -100,6 +100,7 @@ queue_t* HBACK_Q;
 client_t* me;
 int LOCALPORT;
 char* LOCALHOSTNAME;
+char LOCALUSERNAME[MAXSENDERLEN];
 int SEQ_NO; 
 int LEADER_SEQ_NO; 
 

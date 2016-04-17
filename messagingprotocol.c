@@ -130,6 +130,16 @@ void process_late_sequence(chatmessage_t* message, packet_t* newpacket)
   return;
 }
 
+void join_chat(client_t* jointome)
+{
+  char uid[MAXUIDLEN];
+  get_new_uid(uid);
+  char mylocation[MAXPACKETBODYLEN];
+  sprintf(mylocation,"%s:%d",LOCALHOSTNAME,LOCALPORT);
+  printf("Sending JOIN_REQUEST %s to %s:%d\n", mylocation, jointome->hostname, jointome->portnum);
+  send_UDP(JOIN_REQUEST,LOCALUSERNAME,uid,mylocation,jointome);
+  free(jointome);
+}
 
 void *receive_UDP(void* t)
 {
@@ -258,70 +268,91 @@ void *receive_UDP(void* t)
 	  break;
 	case JOIN_REQUEST:
 	  //message from someone who wants to join
-	  
-	  //get the requester's ip and port
 
-	  //	  printf("JOIN_REQUEST packet: %s\n",newpacket->packetbody);
 	  strcpy(newip,strtok(newpacket->packetbody,":"));
 	  newport = atoi(strtok(NULL,IPPORTSTRDELIM));
-	  //	  printf("newip: %s\t newport: %d\n",newip,newport);
+	  printf("Receiving JOIN_REQUEST from: %s:%d\n",newip,newport);
 	  client_t* newguy = create_client(newpacket->sender,newip,newport,FALSE);
 	  
 	  char marshalledaddresses[MAXCHATMESSAGELEN];
-	  
-	  strcpy(marshalledaddresses,newguy->username);
-	  strcat(marshalledaddresses,":");
-	  strcat(marshalledaddresses,newguy->hostname);
-	  char portbuf[10];
-	  sprintf(portbuf,":%d",newguy->portnum);
-	  strcat(marshalledaddresses,portbuf);
-	  pthread_mutex_lock(&CLIENTS->mutex);
-	  curr = CLIENTS->head;
-	  while(curr != NULL)
-	  {
-	    strcat(marshalledaddresses,":");
-	    strcat(marshalledaddresses,((client_t*)curr->elem)->username);
-	    strcat(marshalledaddresses,":");
-	    strcat(marshalledaddresses,((client_t*)curr->elem)->hostname);
-	    //	    char portbuf[10];
-	    sprintf(portbuf,":%d",((client_t*)curr->elem)->portnum);
-	    strcat(marshalledaddresses,portbuf);
-	    curr = curr->next;
-	  }
-	  pthread_mutex_unlock(&CLIENTS->mutex);
-	  //	  printf("JOIN info:\t%s\n",marshalledaddresses);
 
 	  char uid[MAXUIDLEN];
 	  get_new_uid(uid);
-
-	  send_UDP(JOIN,me->username,uid,marshalledaddresses,newguy);
-	  multicast_UDP(JOIN,me->username,uid,marshalledaddresses);
-	  free(newguy);
-
-/*	  sendtoclient = (client_t*)malloc(sizeof(client_t));
-	  // declare hostname_add and portnum_add to be respectively those provided in the arguments
-	  node_t* curr = CLIENTS->head;
-	  while(curr != NULL)
+	  
+	  //if I'm not the leader, send a LEADER_INFO
+	  if(!me->isleader)
 	  {
-	    sendtoclient = ((client_t*)curr->elem);
-	    if(portnum != sendtoclient->portnum)
+	    curr = CLIENTS->head;
+	    pthread_mutex_lock(&CLIENTS->mutex);
+	    client_t* leader = NULL;
+	    while(curr != NULL)
 	    {
-	      strcpy(sendtoclient->username,username);
-	      strcpy(sendtoclient->hostname,hostname);
-	      sendtoclient->portnum = portnum;
-
-	      sendtoclient->isleader = FALSE;
-	      add_elem(UNSEQ_CHAT_MSGS,(void*)sendtoclient);
+	      client_t* client = (client_t*)curr->elem;
+	      if(client->isleader)
+	      {
+		leader = client;
+		break;
+	      }
+	      curr = curr->next;
 	    }
-	    curr = curr->next;
-	    }*/
+	    if(leader == NULL)
+	      printf("Can't process JOIN_REQUEST. Don't know who the leader is!!!\n");
+
+	    pthread_mutex_unlock(&CLIENTS->mutex);
+	    strcpy(marshalledaddresses,leader->username);
+	    strcat(marshalledaddresses,":");
+	    strcat(marshalledaddresses,leader->hostname);
+	    char portbuf[10];
+	    sprintf(portbuf,":%d",leader->portnum);
+	    strcat(marshalledaddresses,portbuf);
+
+	    printf("Sending LEADER_INFO to %s:%d\n",newguy->hostname,newguy->portnum);
+	    send_UDP(LEADER_INFO,leader->username,uid,marshalledaddresses,newguy);
+	  }
+	  else //I'm the leader, so I can send JOIN
+	  {
+	    //	  printf("JOIN_REQUEST packet: %s\n",newpacket->packetbody);
+	    
+	    strcpy(marshalledaddresses,newguy->username);
+	    strcat(marshalledaddresses,":");
+	    strcat(marshalledaddresses,newguy->hostname);
+	    char portbuf[10];
+	    sprintf(portbuf,":%d",newguy->portnum);
+	    strcat(marshalledaddresses,portbuf);
+	    pthread_mutex_lock(&CLIENTS->mutex);
+	    curr = CLIENTS->head;
+	    while(curr != NULL)
+	    {
+	      strcat(marshalledaddresses,":");
+	      strcat(marshalledaddresses,((client_t*)curr->elem)->username);
+	      strcat(marshalledaddresses,":");
+	      strcat(marshalledaddresses,((client_t*)curr->elem)->hostname);
+	      //	    char portbuf[10];
+	      sprintf(portbuf,":%d",((client_t*)curr->elem)->portnum);
+	      strcat(marshalledaddresses,portbuf);
+	      curr = curr->next;
+	    }
+	    pthread_mutex_unlock(&CLIENTS->mutex);
+	    //	  printf("JOIN info:\t%s\n",marshalledaddresses);
+
+	    printf("Sending JOIN to %s:%d\n",newguy->hostname,newguy->portnum);
+	    send_UDP(JOIN,me->username,uid,marshalledaddresses,newguy);
+	    multicast_UDP(JOIN,me->username,uid,marshalledaddresses);
+	  }
+	  free(newguy);
 	  free_packet(newpacket);
 	  break;
-	case EXIT:
-		remove_client(me->hostname,me->portnum);
+	  //	case EXIT:
+	  //		remove_client(me->hostname,me->portnum);
 	case LEADER_INFO:
 	  //if someone asked to join, but they didn't ask the leader, instead of sending a JOIN, send them this. 
 	  //If you receive this, repeat the JOIN_REQUEST, but to the leader. 
+	  strtok(newpacket->packetbody,IPPORTSTRDELIM);
+	  strcpy(newip,strtok(NULL,IPPORTSTRDELIM));
+	  newport = atoi(strtok(NULL,IPPORTSTRDELIM));
+	  printf("Receiving LEADER_INFO: %s:%d\n",newip,newport);
+	  client_t* leader = create_client(newpacket->sender,newip,newport,FALSE);
+	  join_chat(leader);
 
 	  free_packet(newpacket);
 	  break;
@@ -356,9 +387,14 @@ void *receive_UDP(void* t)
 		    strcpy(newusername,newusertest);
 		    strcpy(newip,strtok(NULL,":"));
 		    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
-		    add_client(newusername,newip,newport,FALSE);
 		    if(usernum == 1)
+		    {
 		      print_info_with_senderids(newusername,"has approved your join request",newip,newport);
+		    add_client(newusername,newip,newport,TRUE);
+		    }
+		    else
+		      add_client(newusername,newip,newport,FALSE);
+
 		    usernum++;
 		  }
 
