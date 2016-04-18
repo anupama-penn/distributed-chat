@@ -60,15 +60,24 @@ void exit_chat(chatmessage_t* message){
 }
 
 
-void* fiar_sequencing(void* t)
+void* fair_sequencing(void* t)
 {
   while(1)
   {
     pthread_mutex_lock(&me_mutex); //so we can't enter here until I know who I am
-    while(me->isleader)
+    pthread_mutex_lock(&CLIENTS->mutex);
+    node_t* curr = CLIENTS->head;
+    while(me->isleader && curr != NULL)
     {
-      
+      client_t* client = (client_t*)curr->elem;
+      if(client->unseq_chat_msgs->head != NULL)
+      {
+	assign_sequence((chatmessage_t*)client->unseq_chat_msgs->head->elem);
+	remove_node(client->unseq_chat_msgs->head);
+      }
+      curr = curr->next;
     }
+    pthread_mutex_unlock(&CLIENTS->mutex);
     pthread_mutex_unlock(&me_mutex);
   }
 

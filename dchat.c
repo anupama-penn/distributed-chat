@@ -153,7 +153,7 @@ void *checkup_on_clients(void* t)
 
 void create_message_threads()
 {
-  int numthreads = 3;
+  int numthreads = 4;
   pthread_t threads[numthreads];
   pthread_attr_t attr;
   //  void *exitstatus;
@@ -169,11 +169,13 @@ void create_message_threads()
   pthread_create(&threads[RECEIVE_THREADNUM], &attr, receive_UDP, (void *)RECEIVE_THREADNUM);
   pthread_mutex_lock(&messaging_mutex); //Can only get this lock if receive_UDP has unlocked it
   pthread_mutex_unlock(&messaging_mutex);
+  pthread_create(&threads[FAIRSEQ_THREADNUM], &attr, fair_sequencing, (void *)FAIRSEQ_THREADNUM);
   //  pthread_create(&threads[CHECKUP_THREADNUM], &attr, checkup_on_clients, (void *)CHECKUP_THREADNUM);
 
   //pthread_join(threads[RECEIVE_THREADNUM], &exitstatus);
   //pthread_join(threads[SEND_THREADNUM], &exitstatus);
   //  pthread_join(threads[CHECKUP_THREADNUM], &exitstatus);
+  //  pthread_join(threads[FAIRSEQ_THREADNUM], &exitstatus);
 }
 void discover_ip(){
 
