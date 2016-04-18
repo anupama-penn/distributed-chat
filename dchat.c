@@ -71,7 +71,7 @@ void send_chat_message(int counter, char userinput[])
    char* sendstr = strdup(userinput);
    char uid[MAXUIDLEN];
    get_new_uid(uid);
-   multicast_UDP(CHAT,me->username, uid, sendstr);
+   multicast_UDP(CHAT,me->username, me->uid, uid, sendstr);
    free(sendstr);
 }
 
@@ -115,7 +115,7 @@ void *checkup_on_clients(void* t)
     
     char uid[MAXUIDLEN];
     get_new_uid(uid);
-    multicast_UDP(CHECKUP,me->username, uid, "ARE_YOU_ALIVE"); // multicast checkup message to everyone
+    multicast_UDP(CHECKUP,me->username, me->uid, uid, "ARE_YOU_ALIVE"); // multicast checkup message to everyone
 
     pthread_mutex_lock(&CLIENTS->mutex);
     node_t* curr = CLIENTS->head;

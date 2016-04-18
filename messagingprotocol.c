@@ -4,6 +4,7 @@
 packet_t* parsePacket(char* buf){
   packet_t* input = malloc(sizeof(packet_t));
   strcpy(input->sender,strtok(buf,PACKETDELIM));
+  strcpy(input->senderuid,strtok(NULL,PACKETDELIM));
   strcpy(input->uid,strtok(NULL,PACKETDELIM));
   input->packettype = atoi(strtok(NULL,PACKETDELIM));
   input->packetnum = atoi(strtok(NULL,PACKETDELIM));
@@ -41,7 +42,7 @@ void assign_sequence(chatmessage_t* message)
   char seqnum[5];
   pthread_mutex_lock(&seqno_mutex);
   sprintf(seqnum,"%d",LEADER_SEQ_NO);
-  multicast_UDP(SEQUENCE,me->username,message->uid,seqnum);
+  multicast_UDP(SEQUENCE,me->username,me->uid,message->uid,seqnum);
   LEADER_SEQ_NO++;
   pthread_mutex_unlock(&seqno_mutex);
 }
@@ -54,7 +55,7 @@ void exit_chat(chatmessage_t* message){
     if ((int) strtol(buffer,NULL,10) == 0) {
         // now that ctrl+d has been pressed , do this
         
-        multicast_UDP(EXIT,me->username,message->uid, NULL);
+      multicast_UDP(EXIT,me->username,me->uid,message->uid, NULL);
         
     }
 }
@@ -137,7 +138,7 @@ void join_chat(client_t* jointome)
   char mylocation[MAXPACKETBODYLEN];
   sprintf(mylocation,"%s:%d",LOCALHOSTNAME,LOCALPORT);
   printf("Sending JOIN_REQUEST %s to %s:%d\n", mylocation, jointome->hostname, jointome->portnum);
-  send_UDP(JOIN_REQUEST,LOCALUSERNAME,uid,mylocation,jointome);
+  send_UDP(JOIN_REQUEST,LOCALUSERNAME,mylocation,uid,mylocation,jointome);
   free(jointome);
 }
 
@@ -237,7 +238,7 @@ void *receive_UDP(void* t)
 	    // printf("I (%s) am gonna send alive response to (%s)\n", me->username, newpacket->sender);
 	    
 	    client_t* orig_sender = find_first_client_by_username(newpacket->sender);
-	    send_UDP(CHECKUP, me->username, message->uid, "I_AM_ALIVE", orig_sender);
+	    send_UDP(CHECKUP, me->username, me->uid,message->uid, "I_AM_ALIVE", orig_sender);
 	  }
 	  else if (strcmp(newpacket->packetbody, "I_AM_ALIVE") == 0)
 	  {
@@ -307,7 +308,7 @@ void *receive_UDP(void* t)
 	    strcat(marshalledaddresses,portbuf);
 
 	    printf("Sending LEADER_INFO to %s:%d\n",newguy->hostname,newguy->portnum);
-	    send_UDP(LEADER_INFO,leader->username,uid,marshalledaddresses,newguy);
+	    send_UDP(LEADER_INFO,leader->username,leader->uid,uid,marshalledaddresses,newguy);
 	  }
 	  else //I'm the leader, so I can send JOIN
 	  {
@@ -336,8 +337,8 @@ void *receive_UDP(void* t)
 	    //	  printf("JOIN info:\t%s\n",marshalledaddresses);
 
 	    printf("Sending JOIN to %s:%d\n",newguy->hostname,newguy->portnum);
-	    send_UDP(JOIN,me->username,uid,marshalledaddresses,newguy);
-	    multicast_UDP(JOIN,me->username,uid,marshalledaddresses);
+	    send_UDP(JOIN,me->username,me->uid,uid,marshalledaddresses,newguy);
+	    multicast_UDP(JOIN,me->username,me->uid,uid,marshalledaddresses);
 	  }
 	  free(newguy);
 	  free_packet(newpacket);
@@ -467,7 +468,7 @@ void getLocalIp(char *buf){
     return;
 }
 
-void send_UDP(packettype_t packettype, char sender[], char uid[], char messagebody[], client_t* sendtoclient)
+void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid[], char messagebody[], client_t* sendtoclient)
 {
     
   char packetbodybuf[MAXPACKETBODYLEN];
@@ -506,7 +507,8 @@ void send_UDP(packettype_t packettype, char sender[], char uid[], char messagebo
     strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
     messageindex += MAXPACKETBODYLEN;
 
-    sprintf(packetbuf, "%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
+    sprintf(packetbuf, "%s%s%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, senderuid, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
+    //    sprintf(packetbuf, "%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
     //	  printf("now sending %s to %s:%d\n",packetbuf, ((client_t*)curr->elem)->hostname, ((client_t*)curr->elem)->portnum);
     if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &other_addr, sizeof(other_addr)) < 0) {
       fprintf(stderr, "sendto");
@@ -516,7 +518,7 @@ void send_UDP(packettype_t packettype, char sender[], char uid[], char messagebo
   pthread_mutex_unlock(&messaging_mutex);
 }
 
-void multicast_UDP(packettype_t packettype, char sender[], char uid[], char messagebody[]){
+void multicast_UDP(packettype_t packettype, char sender[], char senderuid[], char uid[], char messagebody[]){
     
     struct sockaddr_in addr;
     int fd;
@@ -559,7 +561,7 @@ void multicast_UDP(packettype_t packettype, char sender[], char uid[], char mess
 	  strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
 	  messageindex += MAXPACKETBODYLEN;
 
-	  sprintf(packetbuf, "%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
+	  sprintf(packetbuf, "%s%s%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, senderuid, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
 	  //	  printf("now sending %s to %s:%d\n",packetbuf, ((client_t*)curr->elem)->hostname, ((client_t*)curr->elem)->portnum);
 	  if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
             fprintf(stderr, "sendto");

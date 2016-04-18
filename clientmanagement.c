@@ -26,6 +26,9 @@ client_t* create_client(char username[], char hostname[], int portnum, bool isle
   strcpy(newclient->hostname,hostname);
   newclient->portnum = portnum;
   newclient->isleader = isleader;
+  char uid[MAXSENDERLEN];
+  sprintf(uid,"%s:%d",hostname,portnum);
+  strcpy(newclient->uid,uid);
   return newclient;
 }
 
@@ -78,6 +81,21 @@ client_t* find_first_client_by_username(char username[])
   }
   return NULL;
 }
+
+client_t* find_client_by_uid(char uid[])
+{
+  client_t* client;
+  node_t* curr = CLIENTS->head;
+  while(curr != NULL)
+  {
+    client = ((client_t*)curr->elem);
+    if(strcmp(uid,client->uid) == 0)
+      return client;
+    curr = curr->next;
+  }
+  return NULL;
+}
+
 
 void holdElection() {
     //Elect a new sequencer
