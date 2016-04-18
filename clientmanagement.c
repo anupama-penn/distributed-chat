@@ -22,10 +22,13 @@ void print_client_list() {
 client_t* create_client(char username[], char hostname[], int portnum, bool isleader)
 {
   client_t* newclient = (client_t*)malloc(sizeof(client_t));
+  llist_t* unseq_chat_msgs = (llist_t*)malloc(sizeof(llist_t));
   strcpy(newclient->username,username);
   strcpy(newclient->hostname,hostname);
   newclient->portnum = portnum;
   newclient->isleader = isleader;
+  init_list(unseq_chat_msgs);
+  newclient->unseq_chat_msgs = unseq_chat_msgs;
   return newclient;
 }
 
@@ -35,6 +38,7 @@ client_t* add_client(char username[], char hostname[], int portnum, bool isleade
   if(portnum==LOCALPORT && strcmp(hostname,LOCALHOSTNAME) == 0)
   {
     me = newclient;
+    pthread_mutex_unlock(&me_mutex);
     uihostname = me->hostname;
     uiport = me->portnum;
   }
@@ -61,6 +65,7 @@ void remove_client(char hostname[], int portnum)
   {
     remove_node(CLIENTS,curr);
   }
+  free_list(client->unseq_chat_msgs);
   free(client);
   client = NULL;
 }

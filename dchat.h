@@ -79,6 +79,7 @@ typedef struct client_t {
   int portnum;
   bool isleader;
   int missed_checkups;
+  llist_t* unseq_chat_msgs;
 } client_t;
 
 
@@ -107,6 +108,7 @@ int LEADER_SEQ_NO;
 int UID_COUNTER; 
 pthread_mutex_t counter_mutex;
 pthread_mutex_t seqno_mutex;
+pthread_mutex_t me_mutex;
 
 //int LOCALPORT = DEFAULTPORT;
 //static bool INITIALIZED = FALSE;

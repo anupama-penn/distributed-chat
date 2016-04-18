@@ -88,5 +88,6 @@ void free_list(llist_t* condemned)
     free(dying);
   }
   pthread_mutex_unlock(&condemned->mutex);
+  free(condemned);
   return;
 }

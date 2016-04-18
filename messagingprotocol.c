@@ -60,6 +60,21 @@ void exit_chat(chatmessage_t* message){
 }
 
 
+void* fiar_sequencing(void* t)
+{
+  while(1)
+  {
+    pthread_mutex_lock(&me_mutex); //so we can't enter here until I know who I am
+    while(me->isleader)
+    {
+      
+    }
+    pthread_mutex_unlock(&me_mutex);
+  }
+
+  pthread_exit((void *)t);
+}
+
 void sequence(chatmessage_t* message, packet_t* newpacket)
 {
   message->seqnum = atoi(newpacket->packetbody);
@@ -377,7 +392,7 @@ void *receive_UDP(void* t)
 	    if(newport == LOCALPORT && strcmp(LOCALHOSTNAME,newip) == 0) //then I'm the guy who just joined
 	      {
 		me = newclient;
-
+		pthread_mutex_unlock(&me_mutex);
 		int usernum = 1;
 		while(1)
 		  {
