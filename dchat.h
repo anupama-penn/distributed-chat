@@ -56,6 +56,7 @@ typedef enum packettype packettype_t;
 
 typedef struct packet_t {
   char sender[MAXSENDERLEN];
+  char senderuid[MAXSENDERLEN];
   char uid[MAXUIDLEN];
   packettype_t packettype;
   int packetnum;
@@ -76,6 +77,7 @@ typedef struct chatmessage_t {
 
 typedef struct client_t {
   char username[MAXSENDERLEN];
+  char uid[MAXSENDERLEN];
   char hostname[MAXIPLEN];
   int portnum;
   bool isleader;
