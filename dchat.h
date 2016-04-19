@@ -84,6 +84,7 @@ typedef struct client_t {
   bool isleader;
   bool isCandidate;
   int missed_checkups;
+  char deferent_to[MAXSENDERLEN];
 } client_t;
 
 

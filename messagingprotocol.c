@@ -60,6 +60,39 @@ void exit_chat(chatmessage_t* message){
     }
 }
 
+void holdElection() {
+    me->isCandidate = TRUE;
+    //time_t start;
+    //start = clock();
+    int num_votes = 0;
+    //Need fix for if there ar econcurrent failures to the election
+    while (me->isCandidate && (num_votes < (CLIENTS->numnodes - 1) ))
+    {
+      sleep(CHECKUP_INTERVAL);
+      char uid[MAXUIDLEN];
+      get_new_uid(uid);
+      printf("Sending LEAD message\n");
+      multicast_UDP(VOTE,me->username, me->uid, uid, "I_SHOULD_LEAD"); // multicast checkup message to everyone
+
+      pthread_mutex_lock(&CLIENTS->mutex);
+      node_t* curr = CLIENTS->head;
+      while(curr != NULL)
+      {
+        if (strcmp(((client_t*)curr->elem)->deferent_to, me->uid) == 0)
+        {
+          num_votes++;
+        }
+        curr = curr->next;
+      }
+      pthread_mutex_unlock(&CLIENTS->mutex);
+      printf("I have (%d) votes of confidence\n", num_votes);
+    }
+
+    //This prints and exits every time a candidate is deferent to another
+    printf("We want (%s) to be the leader!\n", me->deferent_to);
+    
+}
+
 
 void sequence(chatmessage_t* message, packet_t* newpacket)
 {
@@ -147,7 +180,6 @@ void join_chat(client_t* jointome)
 
 void *receive_UDP(void* t)
 {
-    
     struct sockaddr_in addr;
     int fd;
     int nbytes;
@@ -271,9 +303,33 @@ void *receive_UDP(void* t)
 	  free(newpacket);
 	  break;
 	case VOTE:
-		// should I remove my candidacy or not
-	  free_packet(newpacket);
-	  break;
+    printf("Got vote call ah\n");
+    if (strcmp(newpacket->packetbody, "I_SHOULD_LEAD") == 0)
+    {
+      if ((strcmp(me->uid,newpacket->senderuid)) < 0)
+      {
+        // /My uid is less than sender's uid
+        printf("I'm (%s) deferent to (%s)\n", me->username, newpacket->sender);
+        me->isCandidate = FALSE;
+        snprintf(me->deferent_to, sizeof(me->deferent_to), "%s", newpacket->senderuid);
+      }
+      else if ((strcmp(me->uid,newpacket->senderuid)) > 0)
+      {
+        //My uid is greater than sender's uid
+        printf("I'm (%s) more powerful than (%s)\n", me->username, newpacket->sender);
+        snprintf(me->deferent_to, sizeof(me->deferent_to), "%s", me->uid);
+      }
+      
+      //else condition is when I get a multicast from self
+      free_packet(newpacket);
+      break;
+    }
+    else if (strcmp(newpacket->packetbody, "EXPRESS_DEFERENCE") == 0)
+    {
+
+    }
+    free_packet(newpacket);
+    break;
 	case VICTORY:
 
 	  free_packet(newpacket);

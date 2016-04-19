@@ -129,7 +129,7 @@ void *checkup_on_clients(void* t)
 
       /*
       // Just for debugging purposes to see the current status of missed_checkups for each client
-      
+
       printf("%s %s: %d %d\n",((client_t*)curr->elem)->username,
      ((client_t*)curr->elem)->hostname,
      ((client_t*)curr->elem)->portnum,

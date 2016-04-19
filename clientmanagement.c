@@ -128,23 +128,3 @@ client_t* find_client_by_uid(char uid[])
   return NULL;
 }
 
-
-void holdElection() {
-    me->isCandidate = TRUE;
-    while (me->isCandidate)
-    {
-      sleep(CHECKUP_INTERVAL);
-      char uid[MAXUIDLEN];
-      get_new_uid(uid);
-    //  multicast_UDP(VOTE,me->username, me->uid, uid, "I_SHOULD_LEAD"); // multicast checkup message to everyone
-
-
-    }
-
-    //Multicast message with uid claiming to be new leader
-
-    //When receiving one of those messages, check if own uid is higher or lower
-
-  // If self is higher than respond in turn, otherwise set stillCandidate to false
-}
-
