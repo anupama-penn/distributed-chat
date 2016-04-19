@@ -290,7 +290,9 @@ int main(int argc, char* argv[]){
     LEADER_SEQ_NO = 0;
     //    add_client("i_am_follower","127.0.0.1",6000,FALSE); //hardcoded
     create_message_threads();
-    print_info_with_senderids(LOCALUSERNAME,"has created a new chat session",LOCALHOSTNAME,LOCALPORT);
+    char uid[MAXSENDERLEN];
+    sprintf(uid,"%s:%d",LOCALHOSTNAME,LOCALPORT);
+    print_info_with_senderids(LOCALUSERNAME,"has created a new chat session",uid);
     while(1);
     return 0;
   }

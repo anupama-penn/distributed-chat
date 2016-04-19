@@ -87,18 +87,21 @@ void sequence(chatmessage_t* message, packet_t* newpacket)
       firstclientmatchbyname = find_first_client_by_username(firstmessage->messagebody);
     }
 
-    char* hostname = "";
-    int portnum = -1;
+    //    char* hostname = "";
+    //    int portnum = -1;
+    char* uid = "";
 	    
     if(firstclientmatchbyname != NULL)
     {
-      hostname = firstclientmatchbyname->hostname;
-      portnum = firstclientmatchbyname->portnum;
+      //      hostname = firstclientmatchbyname->hostname;
+      //      portnum = firstclientmatchbyname->portnum;
+      uid = firstclientmatchbyname->uid;
     }
+    
     if(firstmessage->messagetype == CHAT)
-      print_msg_with_senderids(firstmessage->sender,firstmessage->messagebody, hostname, portnum);
+      print_msg_with_senderids(firstmessage->sender,firstmessage->messagebody, uid);
     else if(firstmessage->messagetype == JOIN)
-      print_info_with_senderids(firstmessage->messagebody,"has joined the chat",hostname,portnum);
+      print_info_with_senderids(firstmessage->messagebody,"has joined the chat",uid);
     q_dequeue(HBACK_Q);
   }
   pthread_mutex_unlock(&seqno_mutex);
@@ -395,7 +398,7 @@ void *receive_UDP(void* t)
 	  	client_t* client_to_kill = find_client_by_uid(newpacket->packetbody);
 	  	if (client_to_kill != NULL)
 	  	{
-	  		print_info_with_senderids(client_to_kill->username,"has gone offline",client_to_kill->hostname,client_to_kill->portnum);
+	  		print_info_with_senderids(client_to_kill->username,"has gone offline",client_to_kill->uid);
 	  	}
 	  }
 	  
@@ -447,8 +450,8 @@ void *receive_UDP(void* t)
 		    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
 		    if(usernum == 1)
 		    {
-		      print_info_with_senderids(newusername,"has approved your join request",newip,newport);
-		    add_client(newusername,newip,newport,TRUE);
+		      client_t* newleader = add_client(newusername,newip,newport,TRUE);
+		      print_info_with_senderids(newusername,"has approved your join request",newleader->uid);
 		    }
 		    else
 		      add_client(newusername,newip,newport,FALSE);

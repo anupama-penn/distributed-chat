@@ -40,8 +40,9 @@ client_t* add_client(char username[], char hostname[], int portnum, bool isleade
   if(portnum==LOCALPORT && strcmp(hostname,LOCALHOSTNAME) == 0)
   {
     me = newclient;
-    uihostname = me->hostname;
-    uiport = me->portnum;
+    uiuid = newclient->uid;
+    //    uihostname = me->hostname;
+    //    uiport = me->portnum;
   }
   add_elem(CLIENTS,(void*)newclient);
   return newclient;
