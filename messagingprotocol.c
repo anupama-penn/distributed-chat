@@ -74,7 +74,7 @@ void* fair_sequencing(void* t)
       if(client->unseq_chat_msgs->head != NULL)
       {
 	assign_sequence((chatmessage_t*)client->unseq_chat_msgs->head->elem);
-	remove_node(client->unseq_chat_msgs->head);
+	remove_node(client->unseq_chat_msgs,client->unseq_chat_msgs->head);
       }
       curr = curr->next;
     }
@@ -226,7 +226,11 @@ void *receive_UDP(void* t)
 	  message = process_packet(message,newpacket);
 
 	  if(message->iscomplete && me->isleader)
-	    assign_sequence(message);
+	  {
+	    client_t* sendingclient = get_client_by_uid(newpacket->senderuid);
+	    add_elem(sendingclient->unseq_chat_msgs,(void*)message);
+	    //	    assign_sequence(message);
+	  }
 
 	  //for now, just print if it's complete
 	  if(message->iscomplete)
