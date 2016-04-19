@@ -3,6 +3,7 @@
 
 void init_list(llist_t* list)
 {  
+  pthread_mutex_init(&list->mutex,NULL);
   pthread_mutex_lock(&list->mutex);
   list->head = NULL;
   list->tail = NULL;

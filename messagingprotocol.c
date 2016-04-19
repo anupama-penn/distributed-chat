@@ -74,14 +74,13 @@ void* fair_sequencing(void* t)
       client_t* client = (client_t*)curr->elem;
       if(client->unseq_chat_msgs->head != NULL)
       {
-	printf("Fair Sequencing a message\n");
 	assign_sequence((chatmessage_t*)client->unseq_chat_msgs->head->elem);
 	remove_node(client->unseq_chat_msgs,client->unseq_chat_msgs->head);
       }
       curr = curr->next;
     }
     pthread_mutex_unlock(&CLIENTS->mutex);
-    //    usleep(1000);
+    usleep(1000);
   }
 
   pthread_exit((void *)t);
@@ -268,7 +267,7 @@ void *receive_UDP(void* t)
 	    // printf("I (%s) am gonna send alive response to (%s)\n", me->username, newpacket->sender);
 	    
 	    client_t* orig_sender = find_first_client_by_username(newpacket->sender);
-	    send_UDP(CHECKUP, me->username, me->uid,message->uid, "I_AM_ALIVE", orig_sender);
+	    send_UDP(CHECKUP, me->username, me->uid,newpacket->uid, "I_AM_ALIVE", orig_sender);
 	  }
 	  else if (strcmp(newpacket->packetbody, "I_AM_ALIVE") == 0)
 	  {
@@ -402,11 +401,9 @@ void *receive_UDP(void* t)
 	    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
 
 	    //announcement that someone has successfully joined
-	    printf("SOMEBODY JOINING!\t%s\n",message->messagebody);
 	  
 	    client_t* newclient = add_client(newusername,newip,newport,FALSE);
 
-	    printf("Added new Client!\t%s\n",message->messagebody);
 	    if(newport == LOCALPORT && strcmp(LOCALHOSTNAME,newip) == 0) //then I'm the guy who just joined
 	      {
 		me = newclient;
@@ -423,7 +420,7 @@ void *receive_UDP(void* t)
 		    if(usernum == 1)
 		    {
 		      print_info_with_senderids(newusername,"has approved your join request",newip,newport);
-		    add_client(newusername,newip,newport,TRUE);
+		      add_client(newusername,newip,newport,TRUE);
 		    }
 		    else
 		      add_client(newusername,newip,newport,FALSE);
