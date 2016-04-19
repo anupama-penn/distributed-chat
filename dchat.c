@@ -183,15 +183,46 @@ bool check_quorum_on_client_death(char uid_death_row_inmate[]){
   get_new_uid(uid);
   multicast_UDP(QUORUMRESPONSE,me->username, me->uid, uid, uid_death_row_inmate); 
 
-  while ((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < (CLIENTS->numnodes - 1) )
+ // time_t start,end;
+ // start = clock();
+  if (CLIENTS->numnodes == 2)
   {
-    //waiting here to get responses on vote to kill
+    //It's just me and the dead client so I only need one response
+    while ((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < 1)
+    {
+   //   end = clock();
+    //  if (end-start > 5)
+    }
+  }
+  else if (CLIENTS->numnodes == 3)
+  {
+    //It's me, the dead client, and one alive client so I need two responses
+    while ((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < 2)
+    {
+
+    }
+  }
+  else
+  {
+    while ((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < (CLIENTS->numnodes / 2) )
+    {
+
+    }
   }
 
-  if (num_clients_agree_on_death_call >= (CLIENTS->numnodes / 2) )
+/*
+Add global counter for number of successive quorum calls
+*/
+
+/*
+Add time out code
+*/
+
+  if ((num_clients_agree_on_death_call - num_clients_disagree_on_death_call) > 0)
   {
-    return TRUE;
+    return true;
   }
+
 
   return FALSE;
 }
