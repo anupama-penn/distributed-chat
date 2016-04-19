@@ -31,9 +31,10 @@ typedef struct window_t
 typedef struct user_t
 {
   int usernum;
+  char* uid;
   char* username;
-  char* hostname;
-  int portnum;
+  //  char* hostname;
+  //  int portnum;
 } user_t;
 
 typedef struct uimessage_t
@@ -59,8 +60,9 @@ int showhelp;
 char MY_MSG[10240];
 int MY_MSG_INDEX;
 
-char* uihostname;
-int uiport;
+//char* uihostname;
+//int uiport;
+char* uiuid;
 
 int UIRUNNING;
 
@@ -82,11 +84,11 @@ window_t* focusable_wnds[3];
 int focusindex;
 
 void initui(int isdebug);
+user_t* add_user(char* username, char uid[]);
 void print_msg(char* user, char message[]);
 void print_info(char* user, char message[]);
-user_t* find_user_by_hostname_port(char hostname[], int port);
-void print_msg_with_senderids(char* user, char message[], char hostname[], int portnum);
-uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist, int append, char hostname[
-], int portnum);
-void print_info_with_senderids(char* user, char message[], char hostname[], int portnum);
+user_t* find_user_by_uid(char uid[]);
+void print_msg_with_senderids(char* user, char message[], char uid[]);
+uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist, int append, char uid[]);
+void print_info_with_senderids(char* user, char message[], char uid[]);
 void setborder(window_t* wnd);

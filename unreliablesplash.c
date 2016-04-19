@@ -187,7 +187,8 @@ void *splashcurses(void *t)
 int get_color(uimessage_t* uimsg)
 {
   int color = 0;
-  if(strcmp(uimsg->user->hostname,uihostname) == 0 && uimsg->user->portnum == uiport)
+  if(strcmp(uimsg->user->uid,uiuid) == 0)
+    //  if(strcmp(uimsg->user->hostname,uihostname) == 0 && uimsg->user->portnum == uiport)
   {
     color = 3;
   }
@@ -200,34 +201,34 @@ int get_color(uimessage_t* uimsg)
   return color;
 }
 
-user_t* add_user(char* username, char hostname[], int port)
+user_t* add_user(char* username, char uid[])
 {
   user_t* newuser = (user_t*)malloc(sizeof(user_t));
   newuser->username = (char*)malloc(sizeof(char)*100);
-  newuser->hostname = (char*)malloc(sizeof(char)*20);
+  newuser->uid = (char*)malloc(sizeof(char)*30);
   newuser->usernum = USERNUM;
   strcpy(newuser->username,username);
-  strcpy(newuser->hostname,hostname);
-  newuser->portnum = port;
+  strcpy(newuser->uid,uid);
+  //  newuser->portnum = port;
   add_elem(USERS,newuser);
   USERNUM++;
   return newuser;
 }
 
-user_t* find_user_by_hostname_port(char hostname[], int port)
+user_t* find_user_by_uid(char uid[])
 {
   node_t* curr = USERS->head;
   while(curr != NULL)
   {
     user_t* elem = (user_t*)curr->elem;
-    if(strcmp(elem->hostname,hostname) == 0 && port == elem->portnum)
+    if(strcmp(elem->uid,uid) == 0)
       return elem;
     curr = curr->next;
   }
   return NULL;
 }
 
-uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist, int append, char hostname[], int portnum)
+uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist, int append, char uid[])
 {
   int maxline = msgwnd->ncols/2-2;
   int numlines = strlen(message)/maxline;
@@ -262,12 +263,14 @@ uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist
   }
 
   //get associated user
-  user_t* msguser = find_user_by_hostname_port(hostname,portnum);
+  user_t* msguser = find_user_by_uid(uid);
   if(msguser == NULL)
   {
-    msguser = add_user(user,hostname,portnum);
+    msguser = add_user(user,uid);
     printf("Added new user\n");
   }
+  else if(strcmp(msguser->username,user) != 0)
+    strcpy(msguser->username,user);
 
   if(msglist->tail != NULL && ((uimessage_t*)msglist->tail->elem)->user == msguser && append)
   {
@@ -297,7 +300,7 @@ uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist
 
 uimessage_t* add_msg(char* user, char message[], llist_t* msglist, int append)
 {
-  return add_msg_with_senderids(user, message, msglist, append, "", -1);
+  return add_msg_with_senderids(user, message, msglist, append, "");
 }
 
 void print_msgs()
@@ -316,7 +319,7 @@ void print_msgs()
     int namestart = start-6;
     int color = 1;
     //    int namestart = 4;
-    if(strcmp(uimsg->user->hostname,uihostname) == 0 && uimsg->user->portnum == uiport)
+    if(strcmp(uimsg->user->uid,uiuid) == 0)
     {
       start = msgwnd->ncols-4-uimsg->maxwidth;
       namestart = start-6;
@@ -598,10 +601,10 @@ void print_infos()
 
 void print_msg(char* user, char message[])
 {
-  print_msg_with_senderids(user,message,"",-1);
+  print_msg_with_senderids(user,message,"");
 }
 
-void print_msg_with_senderids(char* user, char message[], char hostname[], int portnum)
+void print_msg_with_senderids(char* user, char message[], char uid[])
 {
   if(!UIRUNNING)
   {
@@ -610,7 +613,7 @@ void print_msg_with_senderids(char* user, char message[], char hostname[], int p
   }
   pthread_mutex_lock(&initui_mutex);
   pthread_mutex_unlock(&initui_mutex);
-  uimessage_t* newmessage = add_msg_with_senderids(user,message,MSGS,1,hostname,portnum);
+  uimessage_t* newmessage = add_msg_with_senderids(user,message,MSGS,1,uid);
   printf("Added new msg\n");
   if(newmessage)
   {
@@ -624,10 +627,10 @@ void print_msg_with_senderids(char* user, char message[], char hostname[], int p
 
 void print_info(char* user, char message[])
 {
-  print_info_with_senderids(user, message, "", -1);
+  print_info_with_senderids(user, message, "");
 }
 
-void print_info_with_senderids(char* user, char message[], char hostname[], int portnum)
+void print_info_with_senderids(char* user, char message[], char uid[])
 {
   if(!UIRUNNING)
   {
@@ -636,7 +639,7 @@ void print_info_with_senderids(char* user, char message[], char hostname[], int 
   }
   pthread_mutex_lock(&initui_mutex);
   pthread_mutex_unlock(&initui_mutex);
-  uimessage_t* newmessage = add_msg_with_senderids(user,message,INFOS,0,hostname,portnum);
+  uimessage_t* newmessage = add_msg_with_senderids(user,message,INFOS,0,uid);
   if(newmessage)
   {
     int end = LAST_INFO_NODE == INFOS->tail;
