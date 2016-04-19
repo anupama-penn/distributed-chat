@@ -238,7 +238,7 @@ void *receive_UDP(void* t)
 	    // printf("I (%s) am gonna send alive response to (%s)\n", me->username, newpacket->sender);
 	    
 	    client_t* orig_sender = find_first_client_by_username(newpacket->sender);
-	    send_UDP(CHECKUP, me->username, me->uid,message->uid, "I_AM_ALIVE", orig_sender);
+	    send_UDP(CHECKUP, me->username, me->uid,newpacket->uid, "I_AM_ALIVE", orig_sender);
 	  }
 	  else if (strcmp(newpacket->packetbody, "I_AM_ALIVE") == 0)
 	  {
