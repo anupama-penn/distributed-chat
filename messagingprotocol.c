@@ -63,9 +63,10 @@ void exit_chat(chatmessage_t* message){
 
 void* fair_sequencing(void* t)
 {
+  pthread_mutex_lock(&me_mutex); //so we can't enter here until I know who I am
+  pthread_mutex_unlock(&me_mutex);
   while(1)
   {
-    pthread_mutex_lock(&me_mutex); //so we can't enter here until I know who I am
     pthread_mutex_lock(&CLIENTS->mutex);
     node_t* curr = CLIENTS->head;
     while(me->isleader && curr != NULL)
@@ -73,13 +74,14 @@ void* fair_sequencing(void* t)
       client_t* client = (client_t*)curr->elem;
       if(client->unseq_chat_msgs->head != NULL)
       {
+	printf("Fair Sequencing a message\n");
 	assign_sequence((chatmessage_t*)client->unseq_chat_msgs->head->elem);
 	remove_node(client->unseq_chat_msgs,client->unseq_chat_msgs->head);
       }
       curr = curr->next;
     }
     pthread_mutex_unlock(&CLIENTS->mutex);
-    pthread_mutex_unlock(&me_mutex);
+    //    usleep(1000);
   }
 
   pthread_exit((void *)t);
@@ -227,9 +229,9 @@ void *receive_UDP(void* t)
 
 	  if(message->iscomplete && me->isleader)
 	  {
-	    client_t* sendingclient = get_client_by_uid(newpacket->senderuid);
+	    client_t* sendingclient = find_client_by_uid(newpacket->senderuid);
 	    add_elem(sendingclient->unseq_chat_msgs,(void*)message);
-	    //	    assign_sequence(message);
+	    //assign_sequence(message);
 	  }
 
 	  //for now, just print if it's complete
@@ -393,16 +395,18 @@ void *receive_UDP(void* t)
 
 	  if(message->iscomplete)
 	  {
-	    //announcement that someone has successfully joined
-	    //	    printf("SOMEBODY JOINING!\t%s\n",message->messagebody);
 
 	    //read the first one off first
 	    strcpy(newusername,strtok(message->messagebody,":"));
 	    strcpy(newip,strtok(NULL,":"));
 	    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
+
+	    //announcement that someone has successfully joined
+	    printf("SOMEBODY JOINING!\t%s\n",message->messagebody);
 	  
 	    client_t* newclient = add_client(newusername,newip,newport,FALSE);
 
+	    printf("Added new Client!\t%s\n",message->messagebody);
 	    if(newport == LOCALPORT && strcmp(LOCALHOSTNAME,newip) == 0) //then I'm the guy who just joined
 	      {
 		me = newclient;
@@ -431,7 +435,10 @@ void *receive_UDP(void* t)
 	  }
 
 	  if(message->iscomplete && me->isleader)
+	  {
+	    printf("Immediately sequencing JOIN\n");
 	    assign_sequence(message);
+	  }
 
 	  process_late_sequence(message, newpacket);
 	  
