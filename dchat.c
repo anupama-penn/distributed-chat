@@ -126,29 +126,74 @@ void *checkup_on_clients(void* t)
 
       /*
       * Just for debugging purposes to see the current status of missed_checkups for each client
-
+  
       printf("%s %s: %d %d\n",((client_t*)curr->elem)->username,
      ((client_t*)curr->elem)->hostname,
      ((client_t*)curr->elem)->portnum,
      ((client_t*)curr->elem)->missed_checkups);
-      */      
+
+          */
 
       // check if anyone has missed too many checkups
-      if (((client_t*)curr->elem)->missed_checkups > 4)
+      if (((client_t*)curr->elem)->missed_checkups >= CHECKUP_DEATH_TIMELIMIT)
       {
-        printf("I (%s) believe that (%s) is dead :)\n", me->username, ((client_t*)curr->elem)->username);
+        //Only leader can trigger quorum to remove dead clients
+        if (me->isleader)
+        {
+          pthread_mutex_unlock(&CLIENTS->mutex);
+          bool quorum_to_kill = check_quorum_on_client_death(((client_t*)curr->elem)->uid);
+          pthread_mutex_lock(&CLIENTS->mutex);
+          if (quorum_to_kill)
+          {
+          //  print_info_with_senderids(((client_t*)curr->elem)->username,"has gone offline",((client_t*)curr->elem)->hostname,((client_t*)curr->elem)->portnum);
+            char uid[MAXUIDLEN];
+            get_new_uid(uid);
+            multicast_UDP(EXIT, me->username, me->uid, uid, ((client_t*)curr->elem)->uid);
+          }
+        }
+        else
+        {
+          // If me is not the leader then check if the thought-to-be-dead node is
+          if (((client_t*)curr->elem)->isleader)
+          {
+            printf("OH MAN, O-MAN! I can't believe the leader is dead\n");
+            char uid[MAXUIDLEN];
+            get_new_uid(uid);
+            multicast_UDP(ELECTION,me->username, me->uid, uid, "INITIATE_ELECTION"); // multicast checkup message to everyone
+          }
+        }
+        break;
       }
-      if (((client_t*)curr->elem)->missed_checkups == 4)
+      else
       {
-	print_info_with_senderids(((client_t*)curr->elem)->username,"has gone offline",((client_t*)curr->elem)->hostname,((client_t*)curr->elem)->portnum);
+        curr = curr->next;
       }
-
-      curr = curr->next;
     }
     pthread_mutex_unlock(&CLIENTS->mutex);
+  //  print_client_list();
     counter++;
   }
   pthread_exit((void *)t);
+}
+
+bool check_quorum_on_client_death(char uid_death_row_inmate[]){
+
+  num_clients_agree_on_death_call = 0;
+  char uid[MAXUIDLEN];
+  get_new_uid(uid);
+  multicast_UDP(QUORUMRESPONSE,me->username, me->uid, uid, uid_death_row_inmate); 
+
+  while ((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < (CLIENTS->numnodes - 1) )
+  {
+    //waiting here to get responses on vote to kill
+  }
+
+  if (num_clients_agree_on_death_call >= (CLIENTS->numnodes / 2) )
+  {
+    return TRUE;
+  }
+
+  return FALSE;
 }
 
 void create_message_threads()
@@ -212,13 +257,9 @@ int main(int argc, char* argv[]){
 
   char* localport = argv[1];
   char* runui = argv[argc-1];
-  printf("I'm awake.\n");
 
   LOCALPORT = atoi(localport);
-  printf("I'm still awake.\n");
-
   UIRUNNING = atoi(runui);
-  printf("I'm extra awake.\n");
   LOCALHOSTNAME = "127.0.0.1";
   UID_COUNTER = 0;
   if(argc == 5)

@@ -37,6 +37,7 @@
 #define MESSAGEMULTIPLIER 10
 #define MAXCHATMESSAGELEN MAXPACKETBODYLEN*MESSAGEMULTIPLIER
 #define CHECKUP_INTERVAL 1
+#define CHECKUP_DEATH_TIMELIMIT 3
 
 #define PACKETDELIM "\n"
 #define IPPORTSTRDELIM ":"
@@ -50,7 +51,7 @@
 };
 typedef enum bool_t bool_t;*/
 
-enum packettype { CHAT = 0, SEQUENCE = 1, CHECKUP = 2, ELECTION = 3, VOTE = 4, VICTORY = 5, JOIN_REQUEST = 6, LEADER_INFO = 7, JOIN = 8, EXIT = 9};
+enum packettype { CHAT = 0, SEQUENCE = 1, CHECKUP = 2, ELECTION = 3, VOTE = 4, VICTORY = 5, JOIN_REQUEST = 6, LEADER_INFO = 7, JOIN = 8, EXIT = 9, QUORUMRESPONSE = 10, CONFIRMDEAD = 11};
 typedef enum packettype packettype_t;
 
 typedef struct packet_t {
@@ -80,6 +81,7 @@ typedef struct client_t {
   char hostname[MAXIPLEN];
   int portnum;
   bool isleader;
+  bool isCandidate;
   int missed_checkups;
 } client_t;
 
@@ -113,6 +115,9 @@ pthread_mutex_t seqno_mutex;
 //int LOCALPORT = DEFAULTPORT;
 //static bool INITIALIZED = FALSE;
 
+int num_clients_disagree_on_death_call;
+int num_clients_agree_on_death_call;
+
 // Function Declarations
 
 void error(char*);
@@ -122,6 +127,8 @@ void get_new_uid(char uid[]);
 void *get_user_input(void* t);
 
 void *checkup_on_clients(void* t);
+
+bool check_quorum_on_client_death(char uid_death_row_inmate[]);
 
 //incomplete
 void holdElection();

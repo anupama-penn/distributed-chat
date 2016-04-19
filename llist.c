@@ -1,6 +1,8 @@
 
 #include "llist.h"
 
+#include <stdio.h>
+
 void init_list(llist_t* list)
 {  
   pthread_mutex_lock(&list->mutex);

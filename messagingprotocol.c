@@ -238,15 +238,21 @@ void *receive_UDP(void* t)
 	    // printf("I (%s) am gonna send alive response to (%s)\n", me->username, newpacket->sender);
 	    
 	    client_t* orig_sender = find_first_client_by_username(newpacket->sender);
-	    send_UDP(CHECKUP, me->username, me->uid,newpacket->uid, "I_AM_ALIVE", orig_sender);
+	    if (orig_sender != NULL)
+	    {
+	    	send_UDP(CHECKUP, me->username, me->uid,newpacket->uid, "I_AM_ALIVE", orig_sender);
+	    }
 	  }
 	  else if (strcmp(newpacket->packetbody, "I_AM_ALIVE") == 0)
 	  {
 	    // reset sender's counter back to zero
 	    // printf("Got living confirmation from (%s)\n", newpacket->sender);
 	    
-	    client_t* orig_sender = find_first_client_by_username(newpacket->sender);
-	    orig_sender->missed_checkups = 0;
+	    client_t* orig_sender = find_first_client_by_username(newpacket->sender); //Should fix this to use senderuid
+	    if (orig_sender != NULL)
+	    {
+	    	orig_sender->missed_checkups = 0;
+	    }
 	  }
 	  else
 	  {
@@ -256,14 +262,54 @@ void *receive_UDP(void* t)
 	  free_packet(newpacket);
 	  break;
 	case ELECTION:
-
+	  holdElection();
 	  free(newpacket);
 	  break;
 	case VOTE:
-
+		// should I remove my candidacy or not
 	  free_packet(newpacket);
 	  break;
 	case VICTORY:
+
+	  free_packet(newpacket);
+	  break;
+	case QUORUMRESPONSE:
+
+	// workaround for weird switch scope issues...
+	  if (TRUE)
+	  {
+	  	client_t* orig_sender = find_client_by_uid(newpacket->senderuid);
+	  	client_t* client_to_check = find_client_by_uid(newpacket->packetbody);
+
+		if (orig_sender != NULL && client_to_check != NULL)
+		{
+		  if (client_to_check->missed_checkups >= CHECKUP_DEATH_TIMELIMIT)
+		  {
+		    send_UDP(CONFIRMDEAD, me->username, me->uid,newpacket->uid, "YEP_THEY_ARE_DEAD", orig_sender);
+		  }
+		  else
+		  {
+		  	send_UDP(CONFIRMDEAD, me->username, me->uid,newpacket->uid, "NO_THEY_ARE_ALIVE", orig_sender);
+		  }
+		}
+
+	  }
+	  free_packet(newpacket);
+	  break;
+
+	case CONFIRMDEAD:
+	if (strcmp(newpacket->packetbody,"YEP_THEY_ARE_DEAD") == 0)
+	{
+		num_clients_agree_on_death_call++;
+	}
+	else if (strcmp(newpacket->packetbody,"NO_THEY_ARE_ALIVE") == 0)
+	{
+		num_clients_disagree_on_death_call++;
+	}
+	else
+	{
+		printf("\nUnrecognized value in checkup message!\n");
+	}
 
 	  free_packet(newpacket);
 	  break;
@@ -343,8 +389,21 @@ void *receive_UDP(void* t)
 	  free(newguy);
 	  free_packet(newpacket);
 	  break;
-	  //	case EXIT:
-	  //		remove_client(me->hostname,me->portnum);
+	case EXIT:
+	  if (TRUE)
+	  {
+	  	client_t* client_to_kill = find_client_by_uid(newpacket->packetbody);
+	  	if (client_to_kill != NULL)
+	  	{
+	  		print_info_with_senderids(client_to_kill->username,"has gone offline",client_to_kill->hostname,client_to_kill->portnum);
+	  	}
+	  }
+	  
+	  pthread_mutex_lock(&CLIENTS->mutex);
+	  remove_client_by_uid(newpacket->packetbody);
+	  pthread_mutex_unlock(&CLIENTS->mutex);
+	  free_packet(newpacket);
+	  break;
 	case LEADER_INFO:
 	  //if someone asked to join, but they didn't ask the leader, instead of sending a JOIN, send them this. 
 	  //If you receive this, repeat the JOIN_REQUEST, but to the leader. 
