@@ -26,7 +26,9 @@ client_t* create_client(char username[], char hostname[], int portnum, bool isle
   strcpy(newclient->hostname,hostname);
   newclient->portnum = portnum;
   newclient->isleader = isleader;
+  pthread_mutex_lock(&missed_checkups_mutex);
   newclient->missed_checkups = 0;
+  pthread_mutex_unlock(&missed_checkups_mutex);
   newclient->isCandidate = FALSE;
   char uid[MAXSENDERLEN];
   sprintf(uid,"%s:%d",hostname,portnum);

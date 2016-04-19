@@ -254,7 +254,9 @@ void *receive_UDP(void* t)
 	    client_t* orig_sender = find_first_client_by_username(newpacket->sender); //Should fix this to use senderuid
 	    if (orig_sender != NULL)
 	    {
+        pthread_mutex_lock(&missed_checkups_mutex);
 	    	orig_sender->missed_checkups = 0;
+        pthread_mutex_unlock(&missed_checkups_mutex);
 	    }
 	  }
 	  else

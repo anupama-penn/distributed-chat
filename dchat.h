@@ -38,6 +38,7 @@
 #define MAXCHATMESSAGELEN MAXPACKETBODYLEN*MESSAGEMULTIPLIER
 #define CHECKUP_INTERVAL 1
 #define CHECKUP_DEATH_TIMELIMIT 3
+#define QUORUM_TIMEOUT_MS 1500
 
 #define PACKETDELIM "\n"
 #define IPPORTSTRDELIM ":"
@@ -111,6 +112,7 @@ int LEADER_SEQ_NO;
 int UID_COUNTER; 
 pthread_mutex_t counter_mutex;
 pthread_mutex_t seqno_mutex;
+pthread_mutex_t missed_checkups_mutex;
 
 //int LOCALPORT = DEFAULTPORT;
 //static bool INITIALIZED = FALSE;

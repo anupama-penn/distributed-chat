@@ -122,7 +122,9 @@ void *checkup_on_clients(void* t)
     while(curr != NULL)
     {
       // increment everyones counter by one until they respond
+      pthread_mutex_lock(&missed_checkups_mutex);
       ((client_t*)curr->elem)->missed_checkups++;
+      pthread_mutex_unlock(&missed_checkups_mutex);
 
       /*
       * Just for debugging purposes to see the current status of missed_checkups for each client
@@ -131,8 +133,8 @@ void *checkup_on_clients(void* t)
      ((client_t*)curr->elem)->hostname,
      ((client_t*)curr->elem)->portnum,
      ((client_t*)curr->elem)->missed_checkups);
-
-          */
+*/
+          
 
       // check if anyone has missed too many checkups
       if (((client_t*)curr->elem)->missed_checkups >= CHECKUP_DEATH_TIMELIMIT)
@@ -140,9 +142,10 @@ void *checkup_on_clients(void* t)
         //Only leader can trigger quorum to remove dead clients
         if (me->isleader)
         {
-          pthread_mutex_unlock(&CLIENTS->mutex);
+       //   pthread_mutex_unlock(&CLIENTS->mutex);
           bool quorum_to_kill = check_quorum_on_client_death(((client_t*)curr->elem)->uid);
-          pthread_mutex_lock(&CLIENTS->mutex);
+        //  pthread_mutex_lock(&CLIENTS->mutex);
+
           if (quorum_to_kill)
           {
           //  print_info_with_senderids(((client_t*)curr->elem)->username,"has gone offline",((client_t*)curr->elem)->hostname,((client_t*)curr->elem)->portnum);
@@ -179,32 +182,32 @@ void *checkup_on_clients(void* t)
 bool check_quorum_on_client_death(char uid_death_row_inmate[]){
 
   num_clients_agree_on_death_call = 0;
+  num_clients_disagree_on_death_call = 0;
   char uid[MAXUIDLEN];
   get_new_uid(uid);
   multicast_UDP(QUORUMRESPONSE,me->username, me->uid, uid, uid_death_row_inmate); 
 
- // time_t start,end;
- // start = clock();
+  time_t start;
+  start = clock();
   if (CLIENTS->numnodes == 2)
   {
     //It's just me and the dead client so I only need one response
-    while ((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < 1)
+    while (((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < 1) && (clock()-start < QUORUM_TIMEOUT_MS) )
     {
-   //   end = clock();
-    //  if (end-start > 5)
+
     }
   }
   else if (CLIENTS->numnodes == 3)
   {
     //It's me, the dead client, and one alive client so I need two responses
-    while ((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < 2)
+    while (((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < 2) && (clock()-start < QUORUM_TIMEOUT_MS) )
     {
 
     }
   }
   else
   {
-    while ((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < (CLIENTS->numnodes / 2) )
+    while (((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < (CLIENTS->numnodes / 2)) && (clock()-start < QUORUM_TIMEOUT_MS) )
     {
 
     }
@@ -215,12 +218,18 @@ Add global counter for number of successive quorum calls
 */
 
 /*
-Add time out code
+// Debugging for timeout code
+
+int curr_diff = (num_clients_agree_on_death_call - num_clients_disagree_on_death_call);
+
+int time_diff = clock()-start;
+
+printf("Current Differential: %d at time (%d)\n", curr_diff, time_diff);
 */
 
   if ((num_clients_agree_on_death_call - num_clients_disagree_on_death_call) > 0)
   {
-    return true;
+    return TRUE;
   }
 
 
