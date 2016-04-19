@@ -50,6 +50,7 @@ client_t* add_client(char username[], char hostname[], int portnum, bool isleade
 void remove_client(char hostname[], int portnum)
 {
   client_t* client;
+  pthread_mutex_lock(&CLIENTS->mutex);
   node_t* curr = CLIENTS->head;
   bool found = FALSE;
   while(curr != NULL)
@@ -62,13 +63,10 @@ void remove_client(char hostname[], int portnum)
     }
     curr = curr->next;
   }
+  pthread_mutex_unlock(&CLIENTS->mutex);
   if(found)
   {
-    // Can I unlock clients here? Not sure if there is a better way to do that
-    pthread_mutex_unlock(&CLIENTS->mutex);
     remove_node(CLIENTS,curr);
-    pthread_mutex_lock(&CLIENTS->mutex);
-
   }
   free(client);
   client = NULL;
@@ -77,6 +75,7 @@ void remove_client(char hostname[], int portnum)
 void remove_client_by_uid(char uid[])
 {
   client_t* client;
+  pthread_mutex_lock(&CLIENTS->mutex);
   node_t* curr = CLIENTS->head;
   bool found = FALSE;
   while(curr != NULL)
@@ -89,13 +88,10 @@ void remove_client_by_uid(char uid[])
     }
     curr = curr->next;
   }
+  pthread_mutex_unlock(&CLIENTS->mutex);
   if(found)
   {
-    // Can I unlock clients here? Not sure if there is a better way to do that
-    pthread_mutex_unlock(&CLIENTS->mutex);
     remove_node(CLIENTS,curr);
-    pthread_mutex_lock(&CLIENTS->mutex);
-
   }
   free(client);
   client = NULL;

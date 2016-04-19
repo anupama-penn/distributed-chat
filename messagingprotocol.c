@@ -399,9 +399,7 @@ void *receive_UDP(void* t)
 	  	}
 	  }
 	  
-	  pthread_mutex_lock(&CLIENTS->mutex);
 	  remove_client_by_uid(newpacket->packetbody);
-	  pthread_mutex_unlock(&CLIENTS->mutex);
 	  free_packet(newpacket);
 	  break;
 	case LEADER_INFO:
