@@ -20,6 +20,7 @@ bool initialize_data_structures() {
   init_list(UNSEQ_CHAT_MSGS);
   init_list(STRAY_SEQ_MSGS);
   HBACK_Q = init(message_compare,1000);
+  failed_quorums = 0;
 
   return TRUE;
 }
@@ -127,8 +128,8 @@ void *checkup_on_clients(void* t)
       pthread_mutex_unlock(&missed_checkups_mutex);
 
       /*
-      * Just for debugging purposes to see the current status of missed_checkups for each client
-  
+      // Just for debugging purposes to see the current status of missed_checkups for each client
+      
       printf("%s %s: %d %d\n",((client_t*)curr->elem)->username,
      ((client_t*)curr->elem)->hostname,
      ((client_t*)curr->elem)->portnum,
@@ -181,6 +182,11 @@ void *checkup_on_clients(void* t)
 
 bool check_quorum_on_client_death(char uid_death_row_inmate[]){
 
+  if (failed_quorums > 3)
+  {
+    return TRUE;
+  }
+
   num_clients_agree_on_death_call = 0;
   num_clients_disagree_on_death_call = 0;
   char uid[MAXUIDLEN];
@@ -194,7 +200,6 @@ bool check_quorum_on_client_death(char uid_death_row_inmate[]){
     //It's just me and the dead client so I only need one response
     while (((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < 1) && (clock()-start < QUORUM_TIMEOUT_MS) )
     {
-
     }
   }
   else if (CLIENTS->numnodes == 3)
@@ -202,37 +207,29 @@ bool check_quorum_on_client_death(char uid_death_row_inmate[]){
     //It's me, the dead client, and one alive client so I need two responses
     while (((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < 2) && (clock()-start < QUORUM_TIMEOUT_MS) )
     {
-
     }
   }
   else
   {
     while (((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < (CLIENTS->numnodes / 2)) && (clock()-start < QUORUM_TIMEOUT_MS) )
     {
-
     }
   }
 
 /*
-Add global counter for number of successive quorum calls
-*/
-
-/*
 // Debugging for timeout code
-
 int curr_diff = (num_clients_agree_on_death_call - num_clients_disagree_on_death_call);
-
 int time_diff = clock()-start;
-
 printf("Current Differential: %d at time (%d)\n", curr_diff, time_diff);
 */
 
   if ((num_clients_agree_on_death_call - num_clients_disagree_on_death_call) > 0)
   {
+    failed_quorums = 0;
     return TRUE;
   }
 
-
+  failed_quorums++;
   return FALSE;
 }
 

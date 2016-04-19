@@ -120,6 +120,8 @@ pthread_mutex_t missed_checkups_mutex;
 int num_clients_disagree_on_death_call;
 int num_clients_agree_on_death_call;
 
+int failed_quorums;
+
 // Function Declarations
 
 void error(char*);
