@@ -299,13 +299,25 @@ void *receive_UDP(void* t)
     free_packet(newpacket);
     break;
 	case VICTORY:
-	  if (strcmp(newpacket->packetbody, me->uid) == 0)
+	  if (TRUE)
 	  {
-	  	me->isleader = TRUE;
-	  	pthread_mutex_lock(&seqno_mutex);
-	  	LEADER_SEQ_NO = SEQ_NO;
-	  	pthread_mutex_unlock(&seqno_mutex);
+	  	client_t* client;
+  	  	node_t* curr = CLIENTS->head;
+  	  	while(curr != NULL)
+  	  	{
+    		client = ((client_t*)curr->elem);
+    		if (strcmp(newpacket->packetbody, client->uid) == 0)
+			{
+		  		client->isleader = TRUE;
+		  		pthread_mutex_lock(&seqno_mutex);
+		  		LEADER_SEQ_NO = SEQ_NO;
+		  		pthread_mutex_unlock(&seqno_mutex);
+		  		break;
+			}
+      		curr = curr->next;
+  	  	}
 	  }
+	  
 	  pthread_mutex_lock(&election_happening_mutex);
       election_happening = FALSE;
       pthread_mutex_unlock(&election_happening_mutex);
