@@ -22,7 +22,7 @@ chatmessage_t* create_chatmessage(packet_t* newpacket)
   message->iscomplete = FALSE;
   strcpy(message->sender,newpacket->sender);
   strcpy(message->uid,newpacket->uid);
-
+  strcpy(message->senderuid, newpacket->senderuid);
   //indicate which packet has been received
   int i;
   for(i = 0; i < MESSAGEMULTIPLIER; i++)

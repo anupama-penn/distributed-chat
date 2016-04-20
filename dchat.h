@@ -39,6 +39,7 @@
 #define MAXCHATMESSAGELEN MAXPACKETBODYLEN*MESSAGEMULTIPLIER
 #define CHECKUP_INTERVAL 1
 #define CHECKUP_DEATH_TIMELIMIT 3
+#define QUORUM_TIMEOUT_MS 1500
 
 #define PACKETDELIM "\n"
 #define IPPORTSTRDELIM ":"
@@ -73,6 +74,7 @@ typedef struct chatmessage_t {
   bool packetsreceived[MESSAGEMULTIPLIER];//indicates which packets have been received
   char sender[MAXSENDERLEN];
   char uid[MAXUIDLEN];
+  char senderuid[MAXSENDERLEN];
   char messagebody[MAXCHATMESSAGELEN];
 } chatmessage_t;
 
@@ -85,6 +87,8 @@ typedef struct client_t {
   bool isCandidate;
   int missed_checkups;
   llist_t* unseq_chat_msgs;
+  int num_votes;
+  char deferent_to[MAXSENDERLEN];
 } client_t;
 
 
@@ -114,12 +118,17 @@ int UID_COUNTER;
 pthread_mutex_t counter_mutex;
 pthread_mutex_t seqno_mutex;
 pthread_mutex_t me_mutex;
+pthread_mutex_t missed_checkups_mutex;
+pthread_mutex_t election_happening_mutex;
 
 //int LOCALPORT = DEFAULTPORT;
 //static bool INITIALIZED = FALSE;
 
 int num_clients_disagree_on_death_call;
 int num_clients_agree_on_death_call;
+
+int failed_quorums;
+bool election_happening;
 
 // Function Declarations
 
@@ -139,6 +148,8 @@ void holdElection();
 // add some way to check if client is alive
 
 bool initialize_data_structures();
+
+void stage_coup(char incoming_power[]);
 
 //void destroy_data_structures();
 

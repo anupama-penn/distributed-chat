@@ -60,6 +60,34 @@ void exit_chat(chatmessage_t* message){
     }
 }
 
+void dump_backlog()
+{
+    pthread_mutex_lock(&UNSEQ_CHAT_MSGS->mutex);
+    node_t* curr = UNSEQ_CHAT_MSGS->head;
+    while(curr != NULL)
+    {
+      chatmessage_t* chatmessage = (chatmessage_t*)curr->elem;
+      if(chatmessage->iscomplete)
+      {
+	client_t* sender = find_client_by_uid(chatmessage->senderuid);
+	add_elem(sender->unseq_chat_msgs,chatmessage);
+      }
+      curr = curr->next;
+    }
+    curr = UNSEQ_CHAT_MSGS->head;
+    while(curr != NULL)
+    {
+      chatmessage_t* chatmessage = (chatmessage_t*)curr->elem;
+      if(chatmessage->iscomplete)
+      {
+	node_t* removed = remove_node(UNSEQ_CHAT_MSGS,curr);
+	curr = removed->next;
+      }
+      else
+	curr = curr->next;
+    }
+    pthread_mutex_unlock(&UNSEQ_CHAT_MSGS->mutex);
+}
 
 void* fair_sequencing(void* t)
 {
@@ -172,7 +200,6 @@ void join_chat(client_t* jointome)
 
 void *receive_UDP(void* t)
 {
-    
     struct sockaddr_in addr;
     int fd;
     int nbytes;
@@ -207,7 +234,7 @@ void *receive_UDP(void* t)
         
         nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &addr,&addrlen);
         
-	//printf("RECEIVED: %s\n",buf);
+	// printf("RECEIVED: %s\n",buf);
 
         if (nbytes <0) {
             perror("recvfrom");
@@ -283,7 +310,9 @@ void *receive_UDP(void* t)
 	    client_t* orig_sender = find_first_client_by_username(newpacket->sender); //Should fix this to use senderuid
 	    if (orig_sender != NULL)
 	    {
+        pthread_mutex_lock(&missed_checkups_mutex);
 	    	orig_sender->missed_checkups = 0;
+        pthread_mutex_unlock(&missed_checkups_mutex);
 	    }
 	  }
 	  else
@@ -294,15 +323,61 @@ void *receive_UDP(void* t)
 	  free_packet(newpacket);
 	  break;
 	case ELECTION:
-	  holdElection();
+   	  pthread_mutex_lock(&election_happening_mutex);
+  	  election_happening = TRUE;
+      pthread_mutex_unlock(&election_happening_mutex);
 	  free(newpacket);
 	  break;
 	case VOTE:
-		// should I remove my candidacy or not
-	  free_packet(newpacket);
-	  break;
-	case VICTORY:
+    if (strcmp(newpacket->packetbody, "I_SHOULD_LEAD") == 0)
+    {
+      if ((strcmp(me->uid,newpacket->senderuid)) < 0)
+      {
+        // /My uid is less than sender's uid
+        printf("I'm (%s) deferent to (%s)\n", me->username, newpacket->sender);
+        me->isCandidate = FALSE;
+        snprintf(me->deferent_to, sizeof(me->deferent_to), "%s", newpacket->senderuid);
+      }
+      else if ((strcmp(me->uid,newpacket->senderuid)) > 0)
+      {
+        //My uid is greater than sender's uid
+        printf("I'm (%s) more powerful than (%s)\n", me->username, newpacket->sender);
+        snprintf(me->deferent_to, sizeof(me->deferent_to), "%s", me->uid);
+      }
+      
+      //else condition is when I get a multicast from self
+      free_packet(newpacket);
+      break;
+    }
+    else if (strcmp(newpacket->packetbody, "EXPRESS_DEFERENCE") == 0)
+    {
 
+    }
+    free_packet(newpacket);
+    break;
+	case VICTORY:
+	  if (TRUE)
+	  {
+	  	client_t* client;
+  	  	node_t* curr = CLIENTS->head;
+  	  	while(curr != NULL)
+  	  	{
+    		client = ((client_t*)curr->elem);
+    		if (strcmp(newpacket->packetbody, client->uid) == 0)
+			{
+		  		client->isleader = TRUE;
+		  		pthread_mutex_lock(&seqno_mutex);
+		  		LEADER_SEQ_NO = SEQ_NO;
+		  		pthread_mutex_unlock(&seqno_mutex);
+		  		break;
+			}
+      		curr = curr->next;
+  	  	}
+	  }
+	  
+	  pthread_mutex_lock(&election_happening_mutex);
+      election_happening = FALSE;
+      pthread_mutex_unlock(&election_happening_mutex);
 	  free_packet(newpacket);
 	  break;
 	case QUORUMRESPONSE:
@@ -375,7 +450,13 @@ void *receive_UDP(void* t)
 	      curr = curr->next;
 	    }
 	    if(leader == NULL)
+	    {
 	      printf("Can't process JOIN_REQUEST. Don't know who the leader is!!!\n");
+	      send_UDP(LEADER_INFO,me->username,me->uid,uid,"",newguy);
+	      free(newguy);
+	      free_packet(newpacket);
+	      break;
+	    }
 
 	    pthread_mutex_unlock(&CLIENTS->mutex);
 	    strcpy(marshalledaddresses,leader->username);
@@ -437,6 +518,14 @@ void *receive_UDP(void* t)
 	case LEADER_INFO:
 	  //if someone asked to join, but they didn't ask the leader, instead of sending a JOIN, send them this. 
 	  //If you receive this, repeat the JOIN_REQUEST, but to the leader. 
+	  if(strlen(newpacket->packetbody) == 0)
+	  {
+	    printf("Got no LEADER_INFO. Trying again.\n");
+	    strcpy(newip,strtok(newpacket->senderuid,IPPORTSTRDELIM));
+	    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
+	    client_t* jointome = create_client("",newip,newport,TRUE);
+	    join_chat(jointome);
+	  }
 	  strtok(newpacket->packetbody,IPPORTSTRDELIM);
 	  strcpy(newip,strtok(NULL,IPPORTSTRDELIM));
 	  newport = atoi(strtok(NULL,IPPORTSTRDELIM));
@@ -659,6 +748,7 @@ void multicast_UDP(packettype_t packettype, char sender[], char senderuid[], cha
             fprintf(stderr, "sendto");
             exit(1);
 	  }
+   // printf("Just sent (%s)\n", messagebody);
 	}
 
 	curr = curr->next;

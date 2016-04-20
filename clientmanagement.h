@@ -7,5 +7,4 @@ void remove_client(char hostname[], int portnum);
 void remove_client_by_uid(char uid[]);
 client_t* find_first_client_by_username(char username[]);
 client_t* find_client_by_uid(char uid[]);
-
-void holdElection();
+client_t* find_curr_leader();

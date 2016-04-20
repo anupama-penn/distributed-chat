@@ -19,6 +19,22 @@ void print_client_list() {
   }
 }
 
+client_t* find_curr_leader()
+{
+  client_t* client;
+  node_t* curr = CLIENTS->head;
+  while(curr != NULL)
+  {
+    client = ((client_t*)curr->elem);
+    if(client->isleader == TRUE)
+    {
+      return client;
+    }
+    curr = curr->next;
+  }
+  return NULL;
+}
+
 client_t* create_client(char username[], char hostname[], int portnum, bool isleader)
 {
   client_t* newclient = (client_t*)malloc(sizeof(client_t));
@@ -29,7 +45,9 @@ client_t* create_client(char username[], char hostname[], int portnum, bool isle
   newclient->isleader = isleader;
   init_list(unseq_chat_msgs);
   newclient->unseq_chat_msgs = unseq_chat_msgs;
+  pthread_mutex_lock(&missed_checkups_mutex);
   newclient->missed_checkups = 0;
+  pthread_mutex_unlock(&missed_checkups_mutex);
   newclient->isCandidate = FALSE;
   char uid[MAXSENDERLEN];
   sprintf(uid,"%s:%d",hostname,portnum);
@@ -127,25 +145,5 @@ client_t* find_client_by_uid(char uid[])
     curr = curr->next;
   }
   return NULL;
-}
-
-
-void holdElection() {
-    me->isCandidate = TRUE;
-    while (me->isCandidate)
-    {
-      sleep(CHECKUP_INTERVAL);
-      char uid[MAXUIDLEN];
-      get_new_uid(uid);
-    //  multicast_UDP(VOTE,me->username, me->uid, uid, "I_SHOULD_LEAD"); // multicast checkup message to everyone
-
-
-    }
-
-    //Multicast message with uid claiming to be new leader
-
-    //When receiving one of those messages, check if own uid is higher or lower
-
-  // If self is higher than respond in turn, otherwise set stillCandidate to false
 }
 
