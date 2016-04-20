@@ -314,6 +314,7 @@ void *receive_UDP(void* t)
   				// else condition means that previous leader is greter than sender
   				// So do nothing
   			}
+			curr = curr->next;
   		}
   		pthread_mutex_unlock(&CLIENTS->mutex);
       	pthread_mutex_unlock(&client_deference_mutex);
