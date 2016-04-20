@@ -60,39 +60,6 @@ void exit_chat(chatmessage_t* message){
     }
 }
 
-void holdElection() {
-    me->isCandidate = TRUE;
-    //time_t start;
-    //start = clock();
-    int num_votes = 0;
-    //Need fix for if there ar econcurrent failures to the election
-    while (me->isCandidate && (num_votes < (CLIENTS->numnodes - 1) ))
-    {
-      sleep(CHECKUP_INTERVAL);
-      char uid[MAXUIDLEN];
-      get_new_uid(uid);
-      printf("Sending LEAD message\n");
-      multicast_UDP(VOTE,me->username, me->uid, uid, "I_SHOULD_LEAD"); // multicast checkup message to everyone
-
-      pthread_mutex_lock(&CLIENTS->mutex);
-      node_t* curr = CLIENTS->head;
-      while(curr != NULL)
-      {
-        if (strcmp(((client_t*)curr->elem)->deferent_to, me->uid) == 0)
-        {
-          num_votes++;
-        }
-        curr = curr->next;
-      }
-      pthread_mutex_unlock(&CLIENTS->mutex);
-      printf("I have (%d) votes of confidence\n", num_votes);
-    }
-
-    //This prints and exits every time a candidate is deferent to another
-    printf("We want (%s) to be the leader!\n", me->deferent_to);
-    
-}
-
 
 void sequence(chatmessage_t* message, packet_t* newpacket)
 {
@@ -214,7 +181,7 @@ void *receive_UDP(void* t)
         
         nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &addr,&addrlen);
         
-	//printf("RECEIVED: %s\n",buf);
+	// printf("RECEIVED: %s\n",buf);
 
         if (nbytes <0) {
             perror("recvfrom");
@@ -299,11 +266,12 @@ void *receive_UDP(void* t)
 	  free_packet(newpacket);
 	  break;
 	case ELECTION:
-	  holdElection();
+   	  pthread_mutex_lock(&election_happening_mutex);
+  	  election_happening = TRUE;
+      pthread_mutex_unlock(&election_happening_mutex);
 	  free(newpacket);
 	  break;
 	case VOTE:
-    printf("Got vote call ah\n");
     if (strcmp(newpacket->packetbody, "I_SHOULD_LEAD") == 0)
     {
       if ((strcmp(me->uid,newpacket->senderuid)) < 0)
@@ -331,7 +299,16 @@ void *receive_UDP(void* t)
     free_packet(newpacket);
     break;
 	case VICTORY:
-
+	  if (strcmp(newpacket->packetbody, me->uid) == 0)
+	  {
+	  	me->isleader = TRUE;
+	  	pthread_mutex_lock(&seqno_mutex);
+	  	LEADER_SEQ_NO = SEQ_NO + 1;
+	  	pthread_mutex_unlock(&seqno_mutex);
+	  }
+	  pthread_mutex_lock(&election_happening_mutex);
+      election_happening = FALSE;
+      pthread_mutex_unlock(&election_happening_mutex);
 	  free_packet(newpacket);
 	  break;
 	case QUORUMRESPONSE:
@@ -685,6 +662,7 @@ void multicast_UDP(packettype_t packettype, char sender[], char senderuid[], cha
             fprintf(stderr, "sendto");
             exit(1);
 	  }
+   // printf("Just sent (%s)\n", messagebody);
 	}
 
 	curr = curr->next;

@@ -110,6 +110,9 @@ void *checkup_on_clients(void* t)
 {
 
   int counter = 1;
+  pthread_mutex_lock(&election_happening_mutex);
+  election_happening = FALSE;
+  pthread_mutex_unlock(&election_happening_mutex);
   while(1)
   {
     sleep(CHECKUP_INTERVAL); // Interval between checkups
@@ -136,7 +139,6 @@ void *checkup_on_clients(void* t)
      ((client_t*)curr->elem)->missed_checkups);
 */
           
-
       // check if anyone has missed too many checkups
       if (((client_t*)curr->elem)->missed_checkups >= CHECKUP_DEATH_TIMELIMIT)
       {
@@ -168,16 +170,97 @@ void *checkup_on_clients(void* t)
         }
         break;
       }
-      else
-      {
-        curr = curr->next;
-      }
+      curr = curr->next;
     }
     pthread_mutex_unlock(&CLIENTS->mutex);
   //  print_client_list();
     counter++;
+    if (election_happening)
+    {
+      holdElection();
+    }
   }
   pthread_exit((void *)t);
+}
+
+void holdElection() {
+    me->isCandidate = TRUE;
+    snprintf(me->deferent_to, sizeof(me->deferent_to), "%s", me->uid);
+    //time_t start;
+    //start = clock();
+    int num_votes = 0;
+    //Need fix for if there ar econcurrent failures to the election
+    while (me->isCandidate && (num_votes < (CLIENTS->numnodes - 1) ))
+    {
+      sleep(CHECKUP_INTERVAL);
+      char uid[MAXUIDLEN];
+      get_new_uid(uid);
+      printf("Sending LEAD message to (%d) clients\n", CLIENTS->numnodes);
+      multicast_UDP(VOTE,me->username, me->uid, uid, "I_SHOULD_LEAD"); // multicast checkup message to everyone
+
+      pthread_mutex_lock(&CLIENTS->mutex);
+      node_t* curr = CLIENTS->head;
+      while(curr != NULL)
+      {
+        if (strcmp(((client_t*)curr->elem)->deferent_to, me->uid) == 0)
+        {
+          num_votes++;
+        }
+        curr = curr->next;
+      }
+      pthread_mutex_unlock(&CLIENTS->mutex);
+      printf("I have (%d) votes of confidence\n", num_votes);
+    }
+
+    //Need to loop and count the votes until there is a concensus
+    if (num_votes >= (CLIENTS->numnodes - 1))
+    {
+      //I've won the election
+      stage_coup(me->uid);
+    }
+    else
+    {
+      //need to wait for election to resolve itself
+      while (election_happening)
+      {
+
+      }
+    }
+
+    // Not currently checking all conditions to handle deadlock or concurrent failure of clietns with leader
+
+    pthread_mutex_lock(&election_happening_mutex);
+    election_happening = FALSE;
+    pthread_mutex_unlock(&election_happening_mutex);
+}
+
+void stage_coup(char incoming_power[])
+{
+
+  client_t* oldLeader = find_curr_leader();
+  client_t* usurper = find_client_by_uid(incoming_power);
+
+  if (oldLeader == usurper)
+  {
+
+    return;
+  }
+  else if (usurper != NULL)
+  {
+    if (oldLeader != NULL)
+    {
+      //kill him
+      char uid[MAXUIDLEN];
+      get_new_uid(uid);
+      multicast_UDP(EXIT, me->username, me->uid, uid, oldLeader->uid);
+    }
+    //instill me
+    char uid[MAXUIDLEN];
+    get_new_uid(uid);
+    multicast_UDP(VICTORY, me->username, me->uid, uid, incoming_power);
+    printf("(%s) is now the new leader\n", incoming_power);
+  }
+  return;
 }
 
 bool check_quorum_on_client_death(char uid_death_row_inmate[]){

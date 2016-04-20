@@ -84,6 +84,7 @@ typedef struct client_t {
   bool isleader;
   bool isCandidate;
   int missed_checkups;
+  int num_votes;
   char deferent_to[MAXSENDERLEN];
 } client_t;
 
@@ -114,6 +115,7 @@ int UID_COUNTER;
 pthread_mutex_t counter_mutex;
 pthread_mutex_t seqno_mutex;
 pthread_mutex_t missed_checkups_mutex;
+pthread_mutex_t election_happening_mutex;
 
 //int LOCALPORT = DEFAULTPORT;
 //static bool INITIALIZED = FALSE;
@@ -122,6 +124,7 @@ int num_clients_disagree_on_death_call;
 int num_clients_agree_on_death_call;
 
 int failed_quorums;
+bool election_happening;
 
 // Function Declarations
 
@@ -141,6 +144,8 @@ void holdElection();
 // add some way to check if client is alive
 
 bool initialize_data_structures();
+
+void stage_coup(char incoming_power[]);
 
 //void destroy_data_structures();
 

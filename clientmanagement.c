@@ -19,6 +19,22 @@ void print_client_list() {
   }
 }
 
+client_t* find_curr_leader()
+{
+  client_t* client;
+  node_t* curr = CLIENTS->head;
+  while(curr != NULL)
+  {
+    client = ((client_t*)curr->elem);
+    if(client->isleader == TRUE)
+    {
+      return client;
+    }
+    curr = curr->next;
+  }
+  return NULL;
+}
+
 client_t* create_client(char username[], char hostname[], int portnum, bool isleader)
 {
   client_t* newclient = (client_t*)malloc(sizeof(client_t));
