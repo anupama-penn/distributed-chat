@@ -162,7 +162,7 @@ void *checkup_on_clients(void* t)
           // If me is not the leader then check if the thought-to-be-dead node is
           if (((client_t*)curr->elem)->isleader)
           {
-            printf("OH MAN, O-MAN! I can't believe the leader is dead\n");
+          //  printf("OH MAN, O-MAN! I can't believe the leader is dead\n");
             char uid[MAXUIDLEN];
             get_new_uid(uid);
             multicast_UDP(ELECTION,me->username, me->uid, uid, "INITIATE_ELECTION"); // multicast checkup message to everyone
@@ -186,16 +186,14 @@ void *checkup_on_clients(void* t)
 void holdElection() {
     me->isCandidate = TRUE;
     snprintf(me->deferent_to, sizeof(me->deferent_to), "%s", me->uid);
-    //time_t start;
-    //start = clock();
+   // time_t start;
+   // start = clock();
     int num_votes = 0;
     //Need fix for if there ar econcurrent failures to the election
     while (me->isCandidate && (num_votes < (CLIENTS->numnodes - 1) ))
     {
-      sleep(CHECKUP_INTERVAL);
       char uid[MAXUIDLEN];
       get_new_uid(uid);
-      printf("Sending LEAD message to (%d) clients\n", CLIENTS->numnodes);
       multicast_UDP(VOTE,me->username, me->uid, uid, "I_SHOULD_LEAD"); // multicast checkup message to everyone
 
       pthread_mutex_lock(&CLIENTS->mutex);
@@ -209,7 +207,7 @@ void holdElection() {
         curr = curr->next;
       }
       pthread_mutex_unlock(&CLIENTS->mutex);
-      printf("I have (%d) votes of confidence\n", num_votes);
+  //    printf("I have (%d) votes of confidence\n", num_votes);
     }
 
     //Need to loop and count the votes until there is a concensus
