@@ -381,7 +381,13 @@ void *receive_UDP(void* t)
 	      curr = curr->next;
 	    }
 	    if(leader == NULL)
+	    {
 	      printf("Can't process JOIN_REQUEST. Don't know who the leader is!!!\n");
+	      send_UDP(LEADER_INFO,me->username,me->uid,uid,"",newguy);
+	      free(newguy);
+	      free_packet(newpacket);
+	      break;
+	    }
 
 	    pthread_mutex_unlock(&CLIENTS->mutex);
 	    strcpy(marshalledaddresses,leader->username);
@@ -443,6 +449,14 @@ void *receive_UDP(void* t)
 	case LEADER_INFO:
 	  //if someone asked to join, but they didn't ask the leader, instead of sending a JOIN, send them this. 
 	  //If you receive this, repeat the JOIN_REQUEST, but to the leader. 
+	  if(strlen(newpacket->packetbody) == 0)
+	  {
+	    printf("Got no LEADER_INFO. Trying again.\n");
+	    strcpy(newip,strtok(newpacket->senderuid,IPPORTSTRDELIM));
+	    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
+	    client_t* jointome = create_client("",newip,newport,TRUE);
+	    join_chat(jointome);
+	  }
 	  strtok(newpacket->packetbody,IPPORTSTRDELIM);
 	  strcpy(newip,strtok(NULL,IPPORTSTRDELIM));
 	  newport = atoi(strtok(NULL,IPPORTSTRDELIM));
