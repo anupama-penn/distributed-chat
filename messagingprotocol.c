@@ -303,7 +303,7 @@ void *receive_UDP(void* t)
 	  {
 	  	me->isleader = TRUE;
 	  	pthread_mutex_lock(&seqno_mutex);
-	  	LEADER_SEQ_NO = SEQ_NO + 1;
+	  	LEADER_SEQ_NO = SEQ_NO;
 	  	pthread_mutex_unlock(&seqno_mutex);
 	  }
 	  pthread_mutex_lock(&election_happening_mutex);
