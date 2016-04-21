@@ -108,7 +108,7 @@ void* fair_sequencing(void* t)
       curr = curr->next;
     }
     pthread_mutex_unlock(&CLIENTS->mutex);
-    usleep(1000);
+    usleep(5000000);
   }
 
   pthread_exit((void *)t);
@@ -386,9 +386,10 @@ void *receive_UDP(void* t)
     		client = ((client_t*)curr->elem);
     		if (strcmp(newpacket->packetbody, client->uid) == 0)
 			{
-		  		client->isleader = TRUE;
 		  		pthread_mutex_lock(&seqno_mutex);
+				dump_backlog();
 		  		LEADER_SEQ_NO = SEQ_NO;
+		  		client->isleader = TRUE;
 		  		coup_propogated = TRUE;
 		  		pthread_mutex_unlock(&seqno_mutex);
 		  		break;
