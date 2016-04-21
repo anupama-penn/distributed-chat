@@ -597,6 +597,20 @@ void print_infos()
   wattron(infownd->window,A_BOLD);
   mvwaddstr(infownd->window,infownd->nrows-3,infownd->ncols-22,"<H> TO TOGGLE HELP");
   wattroff(infownd->window,COLOR_PAIR(1));    
+  wattron(infownd->window,A_BLINK);
+  if(unreadmessages)
+  {
+    wattron(infownd->window,COLOR_PAIR(3));    
+    mvwaddstr(infownd->window,infownd->nrows-3,3,"UNREAD MESSAGES");
+    wattron(infownd->window,COLOR_PAIR(3));    
+  }
+  if(unreadinfos)
+  {
+    wattron(infownd->window,COLOR_PAIR(3));    
+    mvwaddstr(infownd->window,infownd->nrows-3,28,"UNREAD UPDATES");
+    wattron(infownd->window,COLOR_PAIR(3));    
+  }
+  wattroff(infownd->window,A_BLINK);
   wattroff(infownd->window,A_BOLD);
 
   if(INFOS->tail != LAST_INFO_NODE)
@@ -639,6 +653,11 @@ void print_msg_with_senderids(char* user, char message[], char uid[])
     if(end)
       LAST_MSG_NODE = newtail;
   }
+  if(LAST_MSG_NODE != MSGS->tail)
+  {
+    unreadmessages = 1;
+    print_infos();
+  }
   print_msgs();
 }
 
@@ -663,6 +682,11 @@ void print_info_with_senderids(char* user, char message[], char uid[])
     node_t* newtail = add_elem(INFOS, (void*)newmessage);
     if(end)
       LAST_INFO_NODE = newtail;
+  }
+  if(LAST_INFO_NODE != INFOS->tail)
+  {
+    unreadinfos = 1;
+    print_infos();
   }
   print_infos();
 }
@@ -927,6 +951,10 @@ void initui(int isdebug)
 
   //  pthread_join(threads[SYSCALL_THREADNUM], &exitstatus);
 
+  unreadmessages = 0;
+  unreadinfos = 0;
+  showhelp = 0;
+
   pthread_mutex_unlock(&initui_mutex);
   int counter = 0;
   while(1)
@@ -978,6 +1006,12 @@ void initui(int isdebug)
 	  LAST_MSG_NODE = MSGS->tail;
 	  print_msgs();
 	}
+	if(LAST_MSG_NODE == MSGS->tail && unreadmessages == 1)
+	{
+	  unreadmessages = 0;
+	  print_infos();
+	}
+
       }
       else if(focuswnd == infownd)
       {
@@ -1013,6 +1047,11 @@ void initui(int isdebug)
 	    showhelp = 0;
 	  else
 	    showhelp = 1;
+	  print_infos();
+	}
+	if(LAST_INFO_NODE == INFOS->tail && unreadinfos == 1)
+	{
+	  unreadinfos = 0;
 	  print_infos();
 	}
 
