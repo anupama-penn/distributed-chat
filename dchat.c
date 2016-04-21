@@ -123,7 +123,7 @@ void *checkup_on_clients(void* t)
 
     pthread_mutex_lock(&CLIENTS->mutex);
     node_t* curr = CLIENTS->head;
-    while(curr != NULL)
+    while(curr != NULL && !election_happening)
     {
       // increment everyones counter by one until they respond
       pthread_mutex_lock(&missed_checkups_mutex);
@@ -162,10 +162,20 @@ void *checkup_on_clients(void* t)
           // If me is not the leader then check if the thought-to-be-dead node is
           if (((client_t*)curr->elem)->isleader)
           {
-          //  printf("OH MAN, O-MAN! I can't believe the leader is dead\n");
-            char uid[MAXUIDLEN];
-            get_new_uid(uid);
-            multicast_UDP(ELECTION,me->username, me->uid, uid, "INITIATE_ELECTION"); // multicast checkup message to everyone
+            bool quorum_to_kill = check_quorum_on_client_death(((client_t*)curr->elem)->uid);
+            if (quorum_to_kill)
+            {
+              char uid[MAXUIDLEN];
+              get_new_uid(uid);
+              pthread_mutex_unlock(&CLIENTS->mutex);
+              multicast_UDP(EXIT, me->username, me->uid, uid, ((client_t*)curr->elem)->uid);
+          //    printf("OH MAN, O-MAN! I can't believe the leader is dead\n");
+              get_new_uid(uid);
+              multicast_UDP(ELECTION,me->username, me->uid, uid, "INITIATE_ELECTION"); // multicast checkup message to everyone
+              pthread_mutex_lock(&election_happening_mutex);
+              election_happening = TRUE;
+              pthread_mutex_unlock(&election_happening_mutex);
+            }
           }
         }
         break;
@@ -175,6 +185,7 @@ void *checkup_on_clients(void* t)
     pthread_mutex_unlock(&CLIENTS->mutex);
   //  print_client_list();
     counter++;
+   // printf("%d\n", election_happening);
     if (election_happening)
     {
       holdElection();
@@ -183,81 +194,82 @@ void *checkup_on_clients(void* t)
   pthread_exit((void *)t);
 }
 
+int countVotes() {
+  pthread_mutex_lock(&CLIENTS->mutex);
+  pthread_mutex_lock(&client_deference_mutex);
+  node_t* curr = CLIENTS->head;
+  int temp_votes = 0; 
+  while(curr != NULL)
+  {
+    if (strcmp(((client_t*)curr->elem)->deferent_to, me->uid) == 0)
+    {
+      temp_votes++;
+    }
+  //  client_t* curr_boss = find_client_by_uid(((client_t*)curr->elem)->deferent_to);
+ //   printf("(%s) is voting for (%s))\n", ((client_t*)curr->elem)->username, curr_boss->username);
+    curr = curr->next;
+  }
+  pthread_mutex_unlock(&client_deference_mutex);
+  pthread_mutex_unlock(&CLIENTS->mutex);
+  return temp_votes;
+}
+
 void holdElection() {
-    me->isCandidate = TRUE;
-    snprintf(me->deferent_to, sizeof(me->deferent_to), "%s", me->uid);
-   // time_t start;
-   // start = clock();
-    int num_votes = 0;
-    //Need fix for if there ar econcurrent failures to the election
-    while (me->isCandidate && (num_votes < (CLIENTS->numnodes - 1) ))
+  me->isCandidate = TRUE;
+  coup_propogated = FALSE;
+  time_t start;
+  start = clock();
+  int num_votes = 0;
+  while (election_happening)
+  {
+    if (me->isCandidate)
     {
       char uid[MAXUIDLEN];
       get_new_uid(uid);
-      multicast_UDP(VOTE,me->username, me->uid, uid, "I_SHOULD_LEAD"); // multicast checkup message to everyone
-
-      pthread_mutex_lock(&CLIENTS->mutex);
-      node_t* curr = CLIENTS->head;
-      while(curr != NULL)
-      {
-        if (strcmp(((client_t*)curr->elem)->deferent_to, me->uid) == 0)
-        {
-          num_votes++;
-        }
-        curr = curr->next;
-      }
-      pthread_mutex_unlock(&CLIENTS->mutex);
-  //    printf("I have (%d) votes of confidence\n", num_votes);
+      multicast_UDP(VOTE, me->username, me->uid, uid, "I_SHOULD_LEAD");
     }
-
-    //Need to loop and count the votes until there is a concensus
-    if (num_votes >= (CLIENTS->numnodes - 1))
+    num_votes = countVotes();
+    if (num_votes == (CLIENTS->numnodes))
     {
-      //I've won the election
       stage_coup(me->uid);
+      pthread_mutex_lock(&election_happening_mutex);
+      election_happening = FALSE;
+      pthread_mutex_unlock(&election_happening_mutex);
     }
     else
     {
-      //need to wait for election to resolve itself
-      while (election_happening)
+      if (clock()-start > ELECTION_TIMEOUT_MS)
       {
-
+        // Do timeout condition
+        if (me->isCandidate)
+        {
+          char uid[MAXUIDLEN];
+          get_new_uid(uid);
+          multicast_UDP(VOTE, me->username, me->uid, uid, "I_SHOULD_LEAD");
+        }
+        num_votes = countVotes();
+        if (num_votes > (CLIENTS->numnodes / 2))
+        {
+          stage_coup(me->uid);
+          pthread_mutex_lock(&election_happening_mutex);
+          election_happening = FALSE;
+          pthread_mutex_unlock(&election_happening_mutex);
+        }
       }
     }
+  }
+  while (!coup_propogated)
+  {
 
-    // Not currently checking all conditions to handle deadlock or concurrent failure of clietns with leader
-
-    pthread_mutex_lock(&election_happening_mutex);
-    election_happening = FALSE;
-    pthread_mutex_unlock(&election_happening_mutex);
+  }
 }
 
 void stage_coup(char incoming_power[])
 {
-
-  client_t* oldLeader = find_curr_leader();
-  client_t* usurper = find_client_by_uid(incoming_power);
-
-  if (oldLeader == usurper)
-  {
-
-    return;
-  }
-  else if (usurper != NULL)
-  {
-    if (oldLeader != NULL)
-    {
-      //kill him
-      char uid[MAXUIDLEN];
-      get_new_uid(uid);
-      multicast_UDP(EXIT, me->username, me->uid, uid, oldLeader->uid);
-    }
-    //instill me
-    char uid[MAXUIDLEN];
-    get_new_uid(uid);
-    multicast_UDP(VICTORY, me->username, me->uid, uid, incoming_power);
-    printf("(%s) is now the new leader\n", incoming_power);
-  }
+  char uid[MAXUIDLEN];
+  get_new_uid(uid);
+  multicast_UDP(VICTORY, me->username, me->uid, uid, incoming_power);
+//  printf("(%s) is now the new leader\n", incoming_power);
   return;
 }
 
@@ -296,13 +308,6 @@ bool check_quorum_on_client_death(char uid_death_row_inmate[]){
     {
     }
   }
-
-/*
-// Debugging for timeout code
-int curr_diff = (num_clients_agree_on_death_call - num_clients_disagree_on_death_call);
-int time_diff = clock()-start;
-printf("Current Differential: %d at time (%d)\n", curr_diff, time_diff);
-*/
 
   if ((num_clients_agree_on_death_call - num_clients_disagree_on_death_call) > 0)
   {

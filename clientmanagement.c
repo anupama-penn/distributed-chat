@@ -93,6 +93,23 @@ void remove_client(char hostname[], int portnum)
   client = NULL;
 }
 
+void clear_deference()
+{
+  client_t* client;
+  pthread_mutex_lock(&CLIENTS->mutex);
+  node_t* curr = CLIENTS->head;
+  pthread_mutex_lock(&client_deference_mutex);
+  while(curr != NULL)
+  {
+    client = ((client_t*)curr->elem);
+    sprintf(client->deferent_to,"IHAVENOsuperiors");
+    curr = curr->next;
+  }
+  pthread_mutex_unlock(&client_deference_mutex);
+  pthread_mutex_unlock(&CLIENTS->mutex);
+  return;
+}
+
 void remove_client_by_uid(char uid[])
 {
   client_t* client;

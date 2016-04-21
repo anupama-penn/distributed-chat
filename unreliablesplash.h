@@ -56,6 +56,8 @@ node_t* LAST_MSG_NODE;
 node_t* LAST_INFO_NODE;
 
 int showhelp;
+int unreadmessages;
+int unreadinfos;
 
 char MY_MSG[10240];
 int MY_MSG_INDEX;

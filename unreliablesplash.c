@@ -455,23 +455,23 @@ void print_infos()
     wattron(infownd->window,A_BOLD);
     wattron(infownd->window,COLOR_PAIR(4));    
     mvwaddstr(infownd->window,6,infownd->ncols-43,"<TAB>  cycle through windows");
-    mvwaddstr(infownd->window,7,8,"<ENTER>");
-    mvwaddstr(infownd->window,8,8,"<ARROWS>");
-    mvwaddstr(infownd->window,9,8,"<BKSPACE>");
-    mvwaddstr(infownd->window,11,8,"<UP/DOWN>");
-    mvwaddstr(infownd->window,12,8,"<LEFT>");
-    mvwaddstr(infownd->window,13,8,"<RIGHT>");
-    mvwaddstr(infownd->window,15,8,"<H>");
-    mvwaddstr(infownd->window,16,8,"<UP/DOWN>");
-    mvwaddstr(infownd->window,17,8,"<LEFT>");
-    mvwaddstr(infownd->window,18,8,"<RIGHT>");
+    mvwaddstr(infownd->window,9,8,"<ENTER>");
+    //    mvwaddstr(infownd->window,8,8,"<ARROWS>");
+    mvwaddstr(infownd->window,10,8,"<BKSPACE>");
+    mvwaddstr(infownd->window,12,8,"<UP/DOWN>");
+    mvwaddstr(infownd->window,13,8,"<LEFT>");
+    mvwaddstr(infownd->window,14,8,"<RIGHT>");
+    mvwaddstr(infownd->window,16,8,"<H>");
+    mvwaddstr(infownd->window,17,8,"<UP/DOWN>");
+    mvwaddstr(infownd->window,18,8,"<LEFT>");
+    mvwaddstr(infownd->window,19,8,"<RIGHT>");
     mvwaddstr(infownd->window,8,infownd->ncols-43,"###############");
     mvwaddstr(infownd->window,9,infownd->ncols-43,"##           ##");
     mvwaddstr(infownd->window,10,infownd->ncols-43,"##           ##");
     mvwaddstr(infownd->window,11,infownd->ncols-43,"###############");
     wattroff(infownd->window,COLOR_PAIR(4));   
     wattron(infownd->window,COLOR_PAIR(1));    
-    mvwaddstr(infownd->window,14,3,"INFO Window");
+    mvwaddstr(infownd->window,15,3,"INFO Window");
     mvwaddstr(infownd->window,9,infownd->ncols-41,"UNRELIABLE");
     mvwaddstr(infownd->window,12,infownd->ncols-43,"###############");
     mvwaddstr(infownd->window,13,infownd->ncols-43,"##           ##");
@@ -480,7 +480,7 @@ void print_infos()
     mvwaddstr(infownd->window,16,infownd->ncols-43,"###############");
     wattroff(infownd->window,COLOR_PAIR(1));    
     wattron(infownd->window,COLOR_PAIR(2));    
-    mvwaddstr(infownd->window,10,3,"MESSAGE Window");
+    mvwaddstr(infownd->window,11,3,"MESSAGE Window");
     mvwaddstr(infownd->window,10,infownd->ncols-41,"CHAT");
     mvwaddstr(infownd->window,8,infownd->ncols-28,"#####################");
     mvwaddstr(infownd->window,9,infownd->ncols-28,"##                 ##");
@@ -496,12 +496,29 @@ void print_infos()
     mvwaddstr(infownd->window,19,infownd->ncols-28,"#####################");
     wattroff(infownd->window,COLOR_PAIR(2));    
     wattron(infownd->window,COLOR_PAIR(3));    
-    mvwaddstr(infownd->window,6,3,"INPUT Window");
+    mvwaddstr(infownd->window,8,3,"INPUT Window");
     mvwaddstr(infownd->window,17,infownd->ncols-43,"###############");
     mvwaddstr(infownd->window,18,infownd->ncols-43,"##           ##");
     mvwaddstr(infownd->window,19,infownd->ncols-43,"###############");
     wattroff(infownd->window,COLOR_PAIR(3));    
     wattroff(infownd->window,A_BOLD);    
+
+    wattron(infownd->window,COLOR_PAIR(4));   
+    mvwaddstr(infownd->window,9,20,"send message");
+    mvwaddstr(infownd->window,10,20,"backspace");
+    mvwaddstr(infownd->window,12,20,"review messages");
+    mvwaddstr(infownd->window,13,20,"skip to oldest");
+    mvwaddstr(infownd->window,14,20,"skip to newest");
+    mvwaddstr(infownd->window,16,20,"toggle mode");
+    mvwaddstr(infownd->window,17,20,"review updates");
+    mvwaddstr(infownd->window,18,20,"skip to oldest");
+    mvwaddstr(infownd->window,19,20,"skip to newest");
+    wattron(infownd->window,A_BOLD);    
+    mvwaddstr(infownd->window,18,infownd->ncols-41,"INPUT");
+    mvwaddstr(infownd->window,9,infownd->ncols-26,"MESSAGE");
+    mvwaddstr(infownd->window,13,infownd->ncols-41,"INFO");
+    wattroff(infownd->window,A_BOLD);    
+    wattroff(infownd->window,COLOR_PAIR(4));   
 
     wattron(infownd->window,COLOR_PAIR(1));    
     wattron(infownd->window,A_BOLD);
@@ -580,6 +597,20 @@ void print_infos()
   wattron(infownd->window,A_BOLD);
   mvwaddstr(infownd->window,infownd->nrows-3,infownd->ncols-22,"<H> TO TOGGLE HELP");
   wattroff(infownd->window,COLOR_PAIR(1));    
+  wattron(infownd->window,A_BLINK);
+  if(unreadmessages)
+  {
+    wattron(infownd->window,COLOR_PAIR(3));    
+    mvwaddstr(infownd->window,infownd->nrows-3,3,"UNREAD MESSAGES");
+    wattron(infownd->window,COLOR_PAIR(3));    
+  }
+  if(unreadinfos)
+  {
+    wattron(infownd->window,COLOR_PAIR(3));    
+    mvwaddstr(infownd->window,infownd->nrows-3,28,"UNREAD UPDATES");
+    wattron(infownd->window,COLOR_PAIR(3));    
+  }
+  wattroff(infownd->window,A_BLINK);
   wattroff(infownd->window,A_BOLD);
 
   if(INFOS->tail != LAST_INFO_NODE)
@@ -622,6 +653,11 @@ void print_msg_with_senderids(char* user, char message[], char uid[])
     if(end)
       LAST_MSG_NODE = newtail;
   }
+  if(LAST_MSG_NODE != MSGS->tail)
+  {
+    unreadmessages = 1;
+    print_infos();
+  }
   print_msgs();
 }
 
@@ -646,6 +682,11 @@ void print_info_with_senderids(char* user, char message[], char uid[])
     node_t* newtail = add_elem(INFOS, (void*)newmessage);
     if(end)
       LAST_INFO_NODE = newtail;
+  }
+  if(LAST_INFO_NODE != INFOS->tail)
+  {
+    unreadinfos = 1;
+    print_infos();
   }
   print_infos();
 }
@@ -910,6 +951,10 @@ void initui(int isdebug)
 
   //  pthread_join(threads[SYSCALL_THREADNUM], &exitstatus);
 
+  unreadmessages = 0;
+  unreadinfos = 0;
+  showhelp = 0;
+
   pthread_mutex_unlock(&initui_mutex);
   int counter = 0;
   while(1)
@@ -961,6 +1006,12 @@ void initui(int isdebug)
 	  LAST_MSG_NODE = MSGS->tail;
 	  print_msgs();
 	}
+	if(LAST_MSG_NODE == MSGS->tail && unreadmessages == 1)
+	{
+	  unreadmessages = 0;
+	  print_infos();
+	}
+
       }
       else if(focuswnd == infownd)
       {
@@ -996,6 +1047,11 @@ void initui(int isdebug)
 	    showhelp = 0;
 	  else
 	    showhelp = 1;
+	  print_infos();
+	}
+	if(LAST_INFO_NODE == INFOS->tail && unreadinfos == 1)
+	{
+	  unreadinfos = 0;
 	  print_infos();
 	}
 
