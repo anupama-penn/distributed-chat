@@ -336,6 +336,7 @@ void *receive_UDP(void* t)
 		  		client->isleader = TRUE;
 		  		pthread_mutex_lock(&seqno_mutex);
 		  		LEADER_SEQ_NO = SEQ_NO;
+		  		coup_propogated = TRUE;
 		  		pthread_mutex_unlock(&seqno_mutex);
 		  		break;
 			}

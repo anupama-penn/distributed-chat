@@ -215,7 +215,7 @@ int countVotes() {
   return temp_votes;
 }
 
-void holdElection() {
+/*void holdElection() {
     me->isCandidate = TRUE;
     time_t start;
     start = clock();
@@ -277,6 +277,58 @@ void holdElection() {
     pthread_mutex_lock(&election_happening_mutex);
     election_happening = FALSE;
     pthread_mutex_unlock(&election_happening_mutex);
+}*/
+
+    //I think there may be a race condition between multicasting VICTORY from within stage_coup and the setting of election_happening to false
+
+void holdElection() {
+  me->isCandidate = TRUE;
+  coup_propogated = FALSE;
+  time_t start;
+  start = clock();
+  int num_votes = 0;
+  while (election_happening)
+  {
+    if (me->isCandidate)
+    {
+      char uid[MAXUIDLEN];
+      get_new_uid(uid);
+      multicast_UDP(VOTE, me->username, me->uid, uid, "I_SHOULD_LEAD");
+    }
+    num_votes = countVotes();
+    if (num_votes == (CLIENTS->numnodes))
+    {
+      stage_coup(me->uid);
+      pthread_mutex_lock(&election_happening_mutex);
+      election_happening = FALSE;
+      pthread_mutex_unlock(&election_happening_mutex);
+    }
+    else
+    {
+      if (clock()-start > ELECTION_TIMEOUT_MS)
+      {
+        // Do timeout condition
+        if (me->isCandidate)
+        {
+          char uid[MAXUIDLEN];
+          get_new_uid(uid);
+          multicast_UDP(VOTE, me->username, me->uid, uid, "I_SHOULD_LEAD");
+        }
+        num_votes = countVotes();
+        if (num_votes > (CLIENTS->numnodes / 2))
+        {
+          stage_coup(me->uid);
+          pthread_mutex_lock(&election_happening_mutex);
+          election_happening = FALSE;
+          pthread_mutex_unlock(&election_happening_mutex);
+        }
+      }
+    }
+  }
+  while (!coup_propogated)
+  {
+
+  }
 }
 
 void stage_coup(char incoming_power[])

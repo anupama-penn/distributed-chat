@@ -123,6 +123,7 @@ int num_clients_agree_on_death_call;
 
 int failed_quorums;
 bool election_happening;
+bool coup_propogated; // Reset this global variable only before return of receipt of VICTORY message
 
 // Function Declarations
 
