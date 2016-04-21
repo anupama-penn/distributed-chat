@@ -123,7 +123,6 @@ void *checkup_on_clients(void* t)
 
     printf("Doin that regular checkup\n");
     pthread_mutex_lock(&CLIENTS->mutex);
-    printf("Fuch\n");
     node_t* curr = CLIENTS->head;
     while(curr != NULL && !election_happening)
     {
@@ -187,7 +186,7 @@ void *checkup_on_clients(void* t)
     pthread_mutex_unlock(&CLIENTS->mutex);
   //  print_client_list();
     counter++;
-    printf("%d\n", election_happening);
+   // printf("%d\n", election_happening);
     if (election_happening)
     {
       holdElection();
@@ -218,13 +217,12 @@ int countVotes() {
 
 void holdElection() {
     me->isCandidate = TRUE;
-   // snprintf(me->deferent_to, sizeof(me->deferent_to), "%s", me->uid);
     time_t start;
     start = clock();
     int num_votes = 0;
     printf("In election function\n");
     //Still not handling case in which more than 50% of clients die after the election process has begun
-    while (me->isCandidate && (num_votes < (CLIENTS->numnodes) ))
+    while (me->isCandidate && (num_votes < (CLIENTS->numnodes) ) && election_happening )
     {
       char uid[MAXUIDLEN];
       get_new_uid(uid);
@@ -235,10 +233,10 @@ void holdElection() {
       if ( clock()-start > ELECTION_TIMEOUT_MS )
       {
         printf("Reached timeout condition\n");
-        //Reached timeout condition -- prevents deadlock
         if (countVotes() > (CLIENTS->numnodes / 2 ))
         {
           // I have a majority of votes
+	  printf("Want to stage coup from within timeout condition.\n");
           stage_coup(me->uid);
           pthread_mutex_lock(&election_happening_mutex);
           election_happening = FALSE;
@@ -250,14 +248,16 @@ void holdElection() {
           //need to wait for election to resolve itself
           while (election_happening)
           {
-
+		// Could get stuck here?
+		sleep(CHECKUP_INTERVAL);
+		printf("Still waiting for election to end. I am in timeout condition.\n");
           }
         }
       } 
     }
 
     //Need to loop and count the votes until there is a concensus
-    if (num_votes >= CLIENTS->numnodes)
+    if (me->isCandidate)
     {
       //I've won the election unanimously
       stage_coup(me->uid);
@@ -267,7 +267,10 @@ void holdElection() {
       //need to wait for election to resolve itself
       while (election_happening)
       {
-
+		// Also could get stuck here?
+		// How to break out if I missed the resetting of election_happening?
+		sleep(CHECKUP_INTERVAL);
+		printf("Still waiting for election to end. I am no longer a candidate.\n");
       }
     }
 
