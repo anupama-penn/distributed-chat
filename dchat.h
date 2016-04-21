@@ -39,6 +39,7 @@
 #define CHECKUP_INTERVAL 1
 #define CHECKUP_DEATH_TIMELIMIT 3
 #define QUORUM_TIMEOUT_MS 1500
+#define ELECTION_TIMEOUT_MS 4000
 
 #define PACKETDELIM "\n"
 #define IPPORTSTRDELIM ":"
@@ -89,13 +90,10 @@ typedef struct client_t {
 } client_t;
 
 
-
-
 //int isSequencer = 0;
 //int alloc_clients_size;
 
 //clist *clientlist;
-
 
 //cname userdata;
 //static char buf[1024];
@@ -125,6 +123,7 @@ int num_clients_agree_on_death_call;
 
 int failed_quorums;
 bool election_happening;
+bool coup_propogated; // Reset this global variable only before return of receipt of VICTORY message
 
 // Function Declarations
 

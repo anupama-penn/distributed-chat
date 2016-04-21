@@ -253,9 +253,9 @@ void *receive_UDP(void* t)
 	    client_t* orig_sender = find_first_client_by_username(newpacket->sender); //Should fix this to use senderuid
 	    if (orig_sender != NULL)
 	    {
-        pthread_mutex_lock(&missed_checkups_mutex);
+        	pthread_mutex_lock(&missed_checkups_mutex);
 	    	orig_sender->missed_checkups = 0;
-        pthread_mutex_unlock(&missed_checkups_mutex);
+        	pthread_mutex_unlock(&missed_checkups_mutex);
 	    }
 	  }
 	  else
@@ -268,32 +268,55 @@ void *receive_UDP(void* t)
 	case ELECTION:
    	  pthread_mutex_lock(&election_happening_mutex);
   	  election_happening = TRUE;
-      pthread_mutex_unlock(&election_happening_mutex);
+      	  pthread_mutex_unlock(&election_happening_mutex);
+
+      	  clear_deference();
 	  free(newpacket);
+	  printf("Tripping election wire\n");
 	  break;
 	case VOTE:
     if (strcmp(newpacket->packetbody, "I_SHOULD_LEAD") == 0)
     {
-      if ((strcmp(me->uid,newpacket->senderuid)) < 0)
-      {
-        // /My uid is less than sender's uid
-        printf("I'm (%s) deferent to (%s)\n", me->username, newpacket->sender);
-        me->isCandidate = FALSE;
-        snprintf(me->deferent_to, sizeof(me->deferent_to), "%s", newpacket->senderuid);
-      }
-      else if ((strcmp(me->uid,newpacket->senderuid)) > 0)
-      {
-        //My uid is greater than sender's uid
-        printf("I'm (%s) more powerful than (%s)\n", me->username, newpacket->sender);
-        snprintf(me->deferent_to, sizeof(me->deferent_to), "%s", me->uid);
-      }
-      
-      //else condition is when I get a multicast from self
-      free_packet(newpacket);
-      break;
-    }
-    else if (strcmp(newpacket->packetbody, "EXPRESS_DEFERENCE") == 0)
-    {
+    	//iterate over all clients and update their local deference accordingly
+    	pthread_mutex_lock(&CLIENTS->mutex);
+   	    pthread_mutex_lock(&client_deference_mutex);
+    	client_t* client;
+  		node_t* curr = CLIENTS->head;
+  		while(curr != NULL)
+  		{
+  			client = ((client_t*)curr->elem);
+  			if (strcmp(client->deferent_to, "IHAVENOsuperiors") == 0)
+  			{
+  				// Currently don't have an allegience yet
+  				// So I'll either support the sender or myself -- depending on who is more powerful
+  				if ((strcmp(client->uid,newpacket->senderuid)) < 0)
+  				{
+  					// Sender is greater than me, so support the sender and remove my candidates
+  					client->isCandidate = FALSE;
+  					snprintf(client->deferent_to, sizeof(client->deferent_to), "%s", newpacket->senderuid);
+  				}
+  				else if ((strcmp(client->uid,newpacket->senderuid)) >= 0)
+  				{
+  					// I am more powerful than the sender so support myself (and I'm still a candidate)
+  					snprintf(client->deferent_to, sizeof(me->deferent_to), "%s", client->uid);
+  				}
+  			}
+  			else
+  			{
+  				client_t* curr_leader = find_client_by_uid(client->deferent_to);
+  				if ((strcmp(curr_leader->uid,newpacket->senderuid)) < 0)
+  				{
+  					// My previous leader is less than sender's uid
+  					// So switch deference to sender
+  					snprintf(client->deferent_to, sizeof(client->deferent_to), "%s", newpacket->senderuid);
+  				}
+  				// else condition means that previous leader is greter than sender
+  				// So do nothing
+  			}
+			curr = curr->next;
+  		}
+  		pthread_mutex_unlock(&CLIENTS->mutex);
+      	pthread_mutex_unlock(&client_deference_mutex);
 
     }
     free_packet(newpacket);
@@ -306,11 +329,14 @@ void *receive_UDP(void* t)
   	  	while(curr != NULL)
   	  	{
     		client = ((client_t*)curr->elem);
+		// Do I need to set all clients to know who the new leader is here?
+		// If not here then where?
     		if (strcmp(newpacket->packetbody, client->uid) == 0)
 			{
 		  		client->isleader = TRUE;
 		  		pthread_mutex_lock(&seqno_mutex);
 		  		LEADER_SEQ_NO = SEQ_NO;
+		  		coup_propogated = TRUE;
 		  		pthread_mutex_unlock(&seqno_mutex);
 		  		break;
 			}
