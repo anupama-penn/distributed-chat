@@ -268,11 +268,9 @@ void *receive_UDP(void* t)
 	case ELECTION:
    	  pthread_mutex_lock(&election_happening_mutex);
   	  election_happening = TRUE;
-      	  pthread_mutex_unlock(&election_happening_mutex);
-
-      	  clear_deference();
+      pthread_mutex_unlock(&election_happening_mutex);
+      clear_deference();
 	  free(newpacket);
-	  printf("Tripping election wire\n");
 	  break;
 	case VOTE:
     if (strcmp(newpacket->packetbody, "I_SHOULD_LEAD") == 0)
@@ -329,8 +327,6 @@ void *receive_UDP(void* t)
   	  	while(curr != NULL)
   	  	{
     		client = ((client_t*)curr->elem);
-		// Do I need to set all clients to know who the new leader is here?
-		// If not here then where?
     		if (strcmp(newpacket->packetbody, client->uid) == 0)
 			{
 		  		client->isleader = TRUE;
