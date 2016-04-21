@@ -121,7 +121,7 @@ void *checkup_on_clients(void* t)
     get_new_uid(uid);
     multicast_UDP(CHECKUP,me->username, me->uid, uid, "ARE_YOU_ALIVE"); // multicast checkup message to everyone
 
-    printf("Doin that regular checkup\n");
+    //printf("Doin that regular checkup\n");
     pthread_mutex_lock(&CLIENTS->mutex);
     node_t* curr = CLIENTS->head;
     while(curr != NULL && !election_happening)
