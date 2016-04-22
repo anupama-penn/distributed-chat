@@ -9,8 +9,6 @@ void error(char *x){
   exit(1);
 }
 
-// add some way to check if client is alive
-
 bool initialize_data_structures() {
     
   UNSEQ_CHAT_MSGS = (llist_t*) malloc(sizeof(llist_t));
@@ -24,39 +22,6 @@ bool initialize_data_structures() {
 
   return TRUE;
 }
-
-/*
-//TODO a long time from now or probably never
-void destroy_data_structures() {
-
-    if (initialized == TRUE) {
-        if (clients != NULL) {
-            if (clients -> clientlist.clientlist_val != NULL) {
-                free(clients->clientlist.clientlist_val);
-            }
-            free(clients);
-        }
-        if (msg_buffer != NULL) {
-            if (msg_buffer->msg_send !=NULL) {
-                free(msg_buffer->msg_send);
-            }
-            if (msg_buffer->user_sent !=NULL) {
-                free(msg_buffer->user_sent);
-            }
-            //no need to free seq_num and MSG type
-        }
-    }
-    }*/
-
-/*
-void shutdown(){
-n    
-    destroy_data_structures();
-    exit(0);
-check    return NULL;
-}
-
-*/
 
 void get_new_uid(char uid[])
 {
@@ -88,7 +53,6 @@ void *get_user_input(void* t)
   {
     while(1)
     {
-      printf("userinput: ");
       fgets(userinput, sizeof(userinput), stdin);
       if(userinput[0] == '\n')
 	continue;
@@ -108,8 +72,6 @@ void *get_user_input(void* t)
 
 void *checkup_on_clients(void* t)
 {
-
-  int counter = 1;
   pthread_mutex_lock(&election_happening_mutex);
   election_happening = FALSE;
   pthread_mutex_unlock(&election_happening_mutex);
@@ -130,26 +92,13 @@ void *checkup_on_clients(void* t)
       ((client_t*)curr->elem)->missed_checkups++;
       pthread_mutex_unlock(&missed_checkups_mutex);
 
-      /*
-      // Just for debugging purposes to see the current status of missed_checkups for each client
-
-      printf("%s %s: %d %d\n",((client_t*)curr->elem)->username,
-     ((client_t*)curr->elem)->hostname,
-     ((client_t*)curr->elem)->portnum,
-     ((client_t*)curr->elem)->missed_checkups);
-*/
-          
       // check if anyone has missed too many checkups
       if (((client_t*)curr->elem)->missed_checkups >= CHECKUP_DEATH_TIMELIMIT)
       {
         //Only leader can trigger quorum to remove dead clients
         if (me->isleader)
         {
-       //   pthread_mutex_unlock(&CLIENTS->mutex);
-          bool quorum_to_kill = check_quorum_on_client_death(((client_t*)curr->elem)->uid);
-        //  pthread_mutex_lock(&CLIENTS->mutex);
-
-          if (quorum_to_kill)
+          if (check_quorum_on_client_death(((client_t*)curr->elem)->uid))
           {
           //  print_info_with_senderids(((client_t*)curr->elem)->username,"has gone offline",((client_t*)curr->elem)->hostname,((client_t*)curr->elem)->portnum);
             char uid[MAXUIDLEN];
@@ -162,14 +111,12 @@ void *checkup_on_clients(void* t)
           // If me is not the leader then check if the thought-to-be-dead node is
           if (((client_t*)curr->elem)->isleader)
           {
-            bool quorum_to_kill = check_quorum_on_client_death(((client_t*)curr->elem)->uid);
-            if (quorum_to_kill)
+            if (check_quorum_on_client_death(((client_t*)curr->elem)->uid))
             {
               char uid[MAXUIDLEN];
               get_new_uid(uid);
               pthread_mutex_unlock(&CLIENTS->mutex);
               multicast_UDP(EXIT, me->username, me->uid, uid, ((client_t*)curr->elem)->uid);
-          //    printf("OH MAN, O-MAN! I can't believe the leader is dead\n");
               get_new_uid(uid);
               multicast_UDP(ELECTION,me->username, me->uid, uid, "INITIATE_ELECTION"); // multicast checkup message to everyone
               pthread_mutex_lock(&election_happening_mutex);
@@ -183,9 +130,6 @@ void *checkup_on_clients(void* t)
       curr = curr->next;
     }
     pthread_mutex_unlock(&CLIENTS->mutex);
-  //  print_client_list();
-    counter++;
-   // printf("%d\n", election_happening);
     if (election_happening)
     {
       holdElection();
@@ -205,8 +149,6 @@ int countVotes() {
     {
       temp_votes++;
     }
-  //  client_t* curr_boss = find_client_by_uid(((client_t*)curr->elem)->deferent_to);
- //   printf("(%s) is voting for (%s))\n", ((client_t*)curr->elem)->username, curr_boss->username);
     curr = curr->next;
   }
   pthread_mutex_unlock(&client_deference_mutex);
@@ -219,7 +161,6 @@ void holdElection() {
   coup_propogated = FALSE;
   time_t start;
   start = clock();
-  int num_votes = 0;
   while (election_happening)
   {
     if (me->isCandidate)
@@ -227,51 +168,37 @@ void holdElection() {
       char uid[MAXUIDLEN];
       get_new_uid(uid);
       multicast_UDP(VOTE, me->username, me->uid, uid, "I_SHOULD_LEAD");
-      usleep(ELECTION_SLEEP_INTERVAL_MS);
     }
-    num_votes = countVotes();
-    if (num_votes == (CLIENTS->numnodes))
+    if (countVotes() == CLIENTS->numnodes)
     {
       stage_coup(me->uid);
-      pthread_mutex_lock(&election_happening_mutex);
-      election_happening = FALSE;
-      pthread_mutex_unlock(&election_happening_mutex);
     }
     else
     {
-      if (clock()-start > ELECTION_TIMEOUT_MS)
+      if ((clock()-start > ELECTION_TIMEOUT_MS) && (countVotes() > (CLIENTS->numnodes / 2)) )
       {
-        // Do timeout condition
-        if (me->isCandidate)
-        {
-          char uid[MAXUIDLEN];
-          get_new_uid(uid);
-          multicast_UDP(VOTE, me->username, me->uid, uid, "I_SHOULD_LEAD");
-          usleep(ELECTION_SLEEP_INTERVAL_MS);
-        }
-        num_votes = countVotes();
-        if (num_votes > (CLIENTS->numnodes / 2))
-        {
-          stage_coup(me->uid);
-          pthread_mutex_lock(&election_happening_mutex);
-          election_happening = FALSE;
-          pthread_mutex_unlock(&election_happening_mutex);
-        }
+        // Handle timeout condition
+        stage_coup(me->uid);
       }
     }
+    usleep(ELECTION_SLEEP_INTERVAL_MS);
   }
   while (!coup_propogated)
   {
-
+   //  printf("Waiting for election results...\n");
+     usleep(ELECTION_SLEEP_INTERVAL_MS);
   }
 }
 
 void stage_coup(char incoming_power[])
 {
-  char uid[MAXUIDLEN];
-  get_new_uid(uid);
-  multicast_UDP(VICTORY, me->username, me->uid, uid, incoming_power);
-//  printf("(%s) is now the new leader\n", incoming_power);
+  while (!coup_propogated && election_happening)
+  {
+    char uid[MAXUIDLEN];
+    get_new_uid(uid);
+    multicast_UDP(VICTORY, me->username, me->uid, uid, incoming_power);
+    usleep(ELECTION_SLEEP_INTERVAL_MS);
+  }
   return;
 }
 
@@ -323,7 +250,7 @@ bool check_quorum_on_client_death(char uid_death_row_inmate[]){
 
 void create_message_threads()
 {
-  int numthreads = 3;
+  int numthreads = 4;
   pthread_t threads[numthreads];
   pthread_attr_t attr;
   //  void *exitstatus;
@@ -339,11 +266,13 @@ void create_message_threads()
   pthread_create(&threads[RECEIVE_THREADNUM], &attr, receive_UDP, (void *)RECEIVE_THREADNUM);
   pthread_mutex_lock(&messaging_mutex); //Can only get this lock if receive_UDP has unlocked it
   pthread_mutex_unlock(&messaging_mutex);
+  pthread_create(&threads[FAIRSEQ_THREADNUM], &attr, fair_sequencing, (void *)FAIRSEQ_THREADNUM);
   pthread_create(&threads[CHECKUP_THREADNUM], &attr, checkup_on_clients, (void *)CHECKUP_THREADNUM);
 
   //pthread_join(threads[RECEIVE_THREADNUM], &exitstatus);
   //pthread_join(threads[SEND_THREADNUM], &exitstatus);
   //  pthread_join(threads[CHECKUP_THREADNUM], &exitstatus);
+  //  pthread_join(threads[FAIRSEQ_THREADNUM], &exitstatus);
 }
 void discover_ip(){
 
@@ -373,6 +302,7 @@ void discover_ip(){
 
 int main(int argc, char* argv[]){
     
+  splash();
   initialize_data_structures();
 
   UIRUNNING = 0;
@@ -387,6 +317,8 @@ int main(int argc, char* argv[]){
   UIRUNNING = atoi(runui);
   LOCALHOSTNAME = "127.0.0.1";
   UID_COUNTER = 0;
+  DUMP_BACKLOG = FALSE;
+  pthread_mutex_lock(&me_mutex); //so we don't try to access the me variable before it's set
   if(argc == 5)
   {
     SEQ_NO = -1;
@@ -400,16 +332,6 @@ int main(int argc, char* argv[]){
   }
   else
   {
-    /*    if(LOCALPORT == 6000)
-    {
-      add_client("i_am_leader","127.0.0.1",5000,TRUE);
-      add_client("i_am_follower","127.0.0.1",6000,FALSE);
-      //      SEQ_NO = 0;
-      //      LEADER_SEQ_NO = 0;
-      create_message_threads();
-      while(1);
-      return 0;
-      }*/
     add_client(LOCALUSERNAME,LOCALHOSTNAME,LOCALPORT,TRUE);
     SEQ_NO = 0;
     LEADER_SEQ_NO = 0;
@@ -422,27 +344,5 @@ int main(int argc, char* argv[]){
     return 0;
   }
 
-  /*
-  if(strcmp(argv[1],"5000"))
-  {
-    LOCALPORT = 6000;
-  }
-  else if(strcmp(argv[1],"6000"))
-  {
-    LOCALPORT = 5000;    
-  }
-  LOCALHOSTNAME = "127.0.0.1";
-  printf("I'm %d\n",LOCALPORT);
-  //add the other fake guy
-  add_client("leader\0","127.0.0.1\0",5000,TRUE);
-  add_client("follower\0","127.0.0.1\0",6000,FALSE);
-
-  if(me->isleader)
-    printf("***I AM LEADER!!!***\n");
-
-  SEQ_NO = 0;
-  LEADER_SEQ_NO = 0;
-  create_message_threads();
-*/
   return 0;
 }

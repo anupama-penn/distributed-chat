@@ -28,6 +28,7 @@
 #define RECEIVE_THREADNUM 0
 #define SEND_THREADNUM 1
 #define CHECKUP_THREADNUM 2
+#define FAIRSEQ_THREADNUM 3
 
 #define MAXIPLEN 32
 #define MAXSENDERLEN 64
@@ -46,6 +47,9 @@
 #define IPPORTSTRDELIM ":"
 
 #define DEFAULTPORT 2886
+
+#define FAIR_SEQ_WAIT 50000
+//#define FAIR_SEQ_WAIT 5000000 //for demonstration purposes
 
 /*enum bool_t
 {
@@ -75,6 +79,7 @@ typedef struct chatmessage_t {
   bool packetsreceived[MESSAGEMULTIPLIER];//indicates which packets have been received
   char sender[MAXSENDERLEN];
   char uid[MAXUIDLEN];
+  char senderuid[MAXSENDERLEN];
   char messagebody[MAXCHATMESSAGELEN];
 } chatmessage_t;
 
@@ -86,6 +91,7 @@ typedef struct client_t {
   bool isleader;
   bool isCandidate;
   int missed_checkups;
+  llist_t* unseq_chat_msgs;
   int num_votes;
   char deferent_to[MAXSENDERLEN];
 } client_t;
@@ -111,10 +117,14 @@ int SEQ_NO;
 int LEADER_SEQ_NO; 
 
 int UID_COUNTER; 
+pthread_mutex_t dump_backlog_mutex;
 pthread_mutex_t counter_mutex;
 pthread_mutex_t seqno_mutex;
+pthread_mutex_t me_mutex;
 pthread_mutex_t missed_checkups_mutex;
 pthread_mutex_t election_happening_mutex;
+
+bool DUMP_BACKLOG;
 
 //int LOCALPORT = DEFAULTPORT;
 //static bool INITIALIZED = FALSE;

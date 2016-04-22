@@ -19,3 +19,4 @@ void process_late_sequence(chatmessage_t* message, packet_t* newpacket);
 void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid[], char messagebody[], client_t* sendtoclient);
 void join_chat(client_t* jointome);
 void getLocalIp(char*);
+void* fair_sequencing(void* t);

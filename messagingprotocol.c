@@ -60,6 +60,77 @@ void exit_chat(chatmessage_t* message){
     }
 }
 
+void dump_backlog()
+{
+    pthread_mutex_lock(&UNSEQ_CHAT_MSGS->mutex);
+    node_t* curr = UNSEQ_CHAT_MSGS->head;
+    while(curr != NULL)
+    {
+      chatmessage_t* chatmessage = (chatmessage_t*)curr->elem;
+      if(chatmessage->iscomplete)
+      {
+	client_t* sender = find_client_by_uid(chatmessage->senderuid);
+	add_elem(sender->unseq_chat_msgs,chatmessage);
+      }
+      curr = curr->next;
+    }
+    pthread_mutex_unlock(&UNSEQ_CHAT_MSGS->mutex);
+    /*    curr = UNSEQ_CHAT_MSGS->head;
+    int index = 0;
+    while(curr != NULL)
+    {
+      chatmessage_t* chatmessage = (chatmessage_t*)curr->elem;
+      if(chatmessage->iscomplete)
+      {
+	printf("removing node %d\n",index);
+	node_t* next = curr->next;
+	remove_node(UNSEQ_CHAT_MSGS,curr);
+	curr = next;
+      }
+      else
+      {
+	printf("not removing node %d\n",index);
+	curr = curr->next;
+      }
+      index++;
+    }
+    printf("CLEARED BACKLOG\n");*/
+    //    pthread_mutex_unlock(&UNSEQ_CHAT_MSGS->mutex);
+    return;
+}
+
+void* fair_sequencing(void* t)
+{
+  while(1)
+  {
+    pthread_mutex_lock(&me_mutex); //so we can't enter here until I know who I am
+    pthread_mutex_unlock(&me_mutex);
+    pthread_mutex_lock(&dump_backlog_mutex);
+    if(DUMP_BACKLOG)
+    {
+      dump_backlog();
+      DUMP_BACKLOG = FALSE;
+    }
+    pthread_mutex_unlock(&dump_backlog_mutex);
+    pthread_mutex_lock(&CLIENTS->mutex);
+    node_t* curr = CLIENTS->head;
+    while(me->isleader && curr != NULL && DUMP_BACKLOG == FALSE)
+    {
+      client_t* client = (client_t*)curr->elem;
+      if(client->unseq_chat_msgs->head != NULL)
+      {
+	assign_sequence((chatmessage_t*)client->unseq_chat_msgs->head->elem);
+	remove_node(client->unseq_chat_msgs,client->unseq_chat_msgs->head);
+      }
+      curr = curr->next;
+    }
+    pthread_mutex_unlock(&CLIENTS->mutex);
+
+    usleep(FAIR_SEQ_WAIT);
+  }
+
+  pthread_exit((void *)t);
+}
 
 void sequence(chatmessage_t* message, packet_t* newpacket)
 {
@@ -72,19 +143,24 @@ void sequence(chatmessage_t* message, packet_t* newpacket)
   {
     SEQ_NO = firstmessage->seqnum;
   }
+  if(firstmessage->seqnum > SEQ_NO)
+  {
+    printf("SEQUENCE OUT OF SYNC. Skipping Ahead by %d messages\n",firstmessage->seqnum-SEQ_NO);
+    SEQ_NO = firstmessage->seqnum;
+  }
   if(firstmessage->seqnum <= SEQ_NO)
   {
     SEQ_NO = firstmessage->seqnum + 1;
     client_t* firstclientmatchbyname;
     if(firstmessage->messagetype == CHAT)
     {
-      printf("\E[34m%s\E(B\E[m (sequenced: %d):\t%s\n", firstmessage->sender, firstmessage->seqnum,firstmessage->messagebody);
-      firstclientmatchbyname = find_first_client_by_username(firstmessage->sender);
+      //      printf("\E[34m%s\E(B\E[m (sequenced: %d):\t%s\n", firstmessage->sender, firstmessage->seqnum,firstmessage->messagebody);
+      firstclientmatchbyname = find_client_by_uid(firstmessage->senderuid);
     }
     else
     {
-      printf("\E[34m%s\E(B\E[m joined the chat (sequenced: %d)\n", firstmessage->messagebody, firstmessage->seqnum);
-      firstclientmatchbyname = find_first_client_by_username(firstmessage->messagebody);
+      //      printf("\E[34m%s\E(B\E[m joined the chat (sequenced: %d)\n", firstmessage->messagebody, firstmessage->seqnum);
+      firstclientmatchbyname = find_client_by_uid(firstmessage->senderuid);
     }
 
     //    char* hostname = "";
@@ -204,11 +280,15 @@ void *receive_UDP(void* t)
 	  message = process_packet(message,newpacket);
 
 	  if(message->iscomplete && me->isleader)
-	    assign_sequence(message);
+	  {
+	    client_t* sendingclient = find_client_by_uid(newpacket->senderuid);
+	    add_elem(sendingclient->unseq_chat_msgs,(void*)message);
+	    //assign_sequence(message);
+	  }
 
 	  //for now, just print if it's complete
 	  if(message->iscomplete)
-	    printf("\E[33m%s\E(B\E[m (not sequenced):\t%s\n", message->sender, message->messagebody);
+	    printf("\E[33m%s\E(B\E[m (not sequenced yet):\t%s\n", message->sender, message->messagebody);
 
 	  //check the stray sequencing list. If there's already something in there that matches, remove it and add the message to the priority queue.
 	  process_late_sequence(message, newpacket);
@@ -239,7 +319,7 @@ void *receive_UDP(void* t)
 	    // send udp message to sender saying that this client is still alive
 	    // printf("I (%s) am gonna send alive response to (%s)\n", me->username, newpacket->sender);
 	    
-	    client_t* orig_sender = find_first_client_by_username(newpacket->sender);
+	    client_t* orig_sender = find_client_by_uid(newpacket->senderuid);
 	    if (orig_sender != NULL)
 	    {
 	    	send_UDP(CHECKUP, me->username, me->uid,newpacket->uid, "I_AM_ALIVE", orig_sender);
@@ -250,7 +330,7 @@ void *receive_UDP(void* t)
 	    // reset sender's counter back to zero
 	    // printf("Got living confirmation from (%s)\n", newpacket->sender);
 	    
-	    client_t* orig_sender = find_first_client_by_username(newpacket->sender); //Should fix this to use senderuid
+	    client_t* orig_sender = find_client_by_uid(newpacket->senderuid);
 	    if (orig_sender != NULL)
 	    {
         	pthread_mutex_lock(&missed_checkups_mutex);
@@ -322,27 +402,39 @@ void *receive_UDP(void* t)
 	case VICTORY:
 	  if (TRUE)
 	  {
+
 	  	client_t* client;
+		pthread_mutex_lock(&CLIENTS->mutex);
   	  	node_t* curr = CLIENTS->head;
   	  	while(curr != NULL)
   	  	{
     		client = ((client_t*)curr->elem);
-    		if (strcmp(newpacket->packetbody, client->uid) == 0)
+    		if (strcmp(newpacket->packetbody, client->uid) == 0 && (client->isleader == FALSE))
 			{
-		  		client->isleader = TRUE;
 		  		pthread_mutex_lock(&seqno_mutex);
+		  		pthread_mutex_lock(&dump_backlog_mutex);
+				if(client == me)
+				{
 		  		LEADER_SEQ_NO = SEQ_NO;
-		  		coup_propogated = TRUE;
+				  DUMP_BACKLOG = TRUE;
+				}
+		  		pthread_mutex_unlock(&dump_backlog_mutex);
 		  		pthread_mutex_unlock(&seqno_mutex);
+				pthread_mutex_lock(&me_mutex);
+		  		client->isleader = TRUE;
+		  		pthread_mutex_unlock(&me_mutex);
+		  		coup_propogated = TRUE;
 		  		break;
 			}
       		curr = curr->next;
   	  	}
+		pthread_mutex_unlock(&CLIENTS->mutex);
+
 	  }
-	  
 	  pthread_mutex_lock(&election_happening_mutex);
-      election_happening = FALSE;
-      pthread_mutex_unlock(&election_happening_mutex);
+	  election_happening = FALSE;
+	  pthread_mutex_unlock(&election_happening_mutex);
+	  
 	  free_packet(newpacket);
 	  break;
 	case QUORUMRESPONSE:
@@ -508,20 +600,20 @@ void *receive_UDP(void* t)
 
 	  if(message->iscomplete)
 	  {
-	    //announcement that someone has successfully joined
-	    //	    printf("SOMEBODY JOINING!\t%s\n",message->messagebody);
 
 	    //read the first one off first
 	    strcpy(newusername,strtok(message->messagebody,":"));
 	    strcpy(newip,strtok(NULL,":"));
 	    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
+
+	    //announcement that someone has successfully joined
 	  
 	    client_t* newclient = add_client(newusername,newip,newport,FALSE);
 
 	    if(newport == LOCALPORT && strcmp(LOCALHOSTNAME,newip) == 0) //then I'm the guy who just joined
 	      {
 		me = newclient;
-
+		pthread_mutex_unlock(&me_mutex);
 		int usernum = 1;
 		while(1)
 		  {
@@ -546,7 +638,10 @@ void *receive_UDP(void* t)
 	  }
 
 	  if(message->iscomplete && me->isleader)
+	  {
+	    printf("Immediately sequencing JOIN\n");
 	    assign_sequence(message);
+	  }
 
 	  process_late_sequence(message, newpacket);
 	  
@@ -556,38 +651,7 @@ void *receive_UDP(void* t)
 	  printf("\nUnrecognized packet type: %d\n", newpacket->packettype);
 	  free_packet(newpacket);
 	}
-
-	//begin sequencing stuff from 
-	/*
-        
-        msg_recv* message_got = parseMessage(&buf);
-        
-        enqueue(queue, message_got);
-        
-        msg_recv* next_message_got = dequeue(queue);
-        
-        if (squence = -1) {
-            squence = (*next_message_got).seq_num;
-        }
-        else if((*next_message_got).seq_num > squence){
-            int targetMessage = (*next_message_got).seq_num;
-            squence ++;
-        
-            while (squence <targetMessage) {
-            
-                printf("redelivery of messages is requested");
-            
-                next_message_got = retry(&squence);
-            
-                printf("%s: %s\n", (*next_message_got).user_sent, (*next_message_got).msg_sent);
-            
-                squence++;
-            }
-        }
-        
-        squence ++;
-        printf("%s: %s\n", (*next_message_got).user_sent, (*next_message_got).msg_sent);
-	*/    
+ 
     }//end of while
     pthread_exit((void *)t);
 }
@@ -658,6 +722,8 @@ void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid
       exit(1);
     }
   }
+  shutdown(fd, SHUT_RDWR);
+  close(fd);
   pthread_mutex_unlock(&messaging_mutex);
 }
 
@@ -693,7 +759,9 @@ void multicast_UDP(packettype_t packettype, char sender[], char senderuid[], cha
         
 	if (inet_aton(((client_t*)curr->elem)->hostname, &addr.sin_addr)==0) {
 	  fprintf(stderr, "inet_aton() failed\n");
-	  exit(1);
+	  curr = curr->next;
+	  continue;
+	  //	  exit(1);
 	}
 
 
@@ -715,6 +783,8 @@ void multicast_UDP(packettype_t packettype, char sender[], char senderuid[], cha
 
 	curr = curr->next;
     }
+    shutdown(fd, SHUT_RDWR);
+    close(fd);
     pthread_mutex_unlock(&messaging_mutex);
     //close(fd);
 }

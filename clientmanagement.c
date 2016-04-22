@@ -2,7 +2,6 @@
 
 void print_client_list() {
   int numclients = CLIENTS->numnodes;
-    
   printf("Total # of Clients:\t%d\n", numclients);
 
   node_t* curr = CLIENTS->head;
@@ -11,9 +10,10 @@ void print_client_list() {
     printf("%s %s: %d",((client_t*)curr->elem)->username,
 	   ((client_t*)curr->elem)->hostname,
 	   ((client_t*)curr->elem)->portnum);
-
     if(((client_t*)curr->elem)->isleader == TRUE)
-            printf(" I...am...LEADER!!!");
+    {
+      printf(" I...am...LEADER!!!");
+    }    
     printf("\n");
     curr = curr->next;
   }
@@ -38,10 +38,13 @@ client_t* find_curr_leader()
 client_t* create_client(char username[], char hostname[], int portnum, bool isleader)
 {
   client_t* newclient = (client_t*)malloc(sizeof(client_t));
+  llist_t* unseq_chat_msgs = (llist_t*)malloc(sizeof(llist_t));
   strcpy(newclient->username,username);
   strcpy(newclient->hostname,hostname);
   newclient->portnum = portnum;
   newclient->isleader = isleader;
+  init_list(unseq_chat_msgs);
+  newclient->unseq_chat_msgs = unseq_chat_msgs;
   pthread_mutex_lock(&missed_checkups_mutex);
   newclient->missed_checkups = 0;
   pthread_mutex_unlock(&missed_checkups_mutex);
@@ -58,9 +61,8 @@ client_t* add_client(char username[], char hostname[], int portnum, bool isleade
   if(portnum==LOCALPORT && strcmp(hostname,LOCALHOSTNAME) == 0)
   {
     me = newclient;
+    pthread_mutex_unlock(&me_mutex);
     uiuid = newclient->uid;
-    //    uihostname = me->hostname;
-    //    uiport = me->portnum;
   }
   add_elem(CLIENTS,(void*)newclient);
   return newclient;
@@ -129,22 +131,9 @@ void remove_client_by_uid(char uid[])
   {
     remove_node(CLIENTS,curr);
   }
+  free_list(client->unseq_chat_msgs);
   free(client);
   client = NULL;
-}
-
-client_t* find_first_client_by_username(char username[])
-{
-  client_t* client;
-  node_t* curr = CLIENTS->head;
-  while(curr != NULL)
-  {
-    client = ((client_t*)curr->elem);
-    if(strcmp(username,client->username) == 0)
-      return client;
-    curr = curr->next;
-  }
-  return NULL;
 }
 
 client_t* find_client_by_uid(char uid[])
