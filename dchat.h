@@ -48,6 +48,8 @@
 
 #define DEFAULTPORT 2886
 
+#define FAIR_SEQ_WAIT 5000000
+
 /*enum bool_t
 {
   FALSE=0,

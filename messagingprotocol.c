@@ -108,7 +108,7 @@ void* fair_sequencing(void* t)
       curr = curr->next;
     }
     pthread_mutex_unlock(&CLIENTS->mutex);
-    usleep(5000000);
+    usleep(FAIR_SEQ_WAIT);
   }
 
   pthread_exit((void *)t);
