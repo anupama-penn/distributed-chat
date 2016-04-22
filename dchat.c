@@ -227,6 +227,7 @@ void holdElection() {
       char uid[MAXUIDLEN];
       get_new_uid(uid);
       multicast_UDP(VOTE, me->username, me->uid, uid, "I_SHOULD_LEAD");
+      usleep(ELECTION_SLEEP_INTERVAL_MS);
     }
     num_votes = countVotes();
     if (num_votes == (CLIENTS->numnodes))
@@ -246,6 +247,7 @@ void holdElection() {
           char uid[MAXUIDLEN];
           get_new_uid(uid);
           multicast_UDP(VOTE, me->username, me->uid, uid, "I_SHOULD_LEAD");
+          usleep(ELECTION_SLEEP_INTERVAL_MS);
         }
         num_votes = countVotes();
         if (num_votes > (CLIENTS->numnodes / 2))
