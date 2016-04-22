@@ -116,11 +116,14 @@ int SEQ_NO;
 int LEADER_SEQ_NO; 
 
 int UID_COUNTER; 
+pthread_mutex_t dump_backlog_mutex;
 pthread_mutex_t counter_mutex;
 pthread_mutex_t seqno_mutex;
 pthread_mutex_t me_mutex;
 pthread_mutex_t missed_checkups_mutex;
 pthread_mutex_t election_happening_mutex;
+
+bool DUMP_BACKLOG;
 
 //int LOCALPORT = DEFAULTPORT;
 //static bool INITIALIZED = FALSE;

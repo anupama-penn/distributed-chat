@@ -62,6 +62,7 @@ void exit_chat(chatmessage_t* message){
 
 void dump_backlog()
 {
+  printf("ASSESSING BACKLOG\n");
     pthread_mutex_lock(&UNSEQ_CHAT_MSGS->mutex);
     node_t* curr = UNSEQ_CHAT_MSGS->head;
     while(curr != NULL)
@@ -74,30 +75,48 @@ void dump_backlog()
       }
       curr = curr->next;
     }
+    printf("DUMPING BACKLOG\n");
+    pthread_mutex_unlock(&UNSEQ_CHAT_MSGS->mutex);
     curr = UNSEQ_CHAT_MSGS->head;
+    int index = 0;
     while(curr != NULL)
     {
       chatmessage_t* chatmessage = (chatmessage_t*)curr->elem;
       if(chatmessage->iscomplete)
       {
-	node_t* removed = remove_node(UNSEQ_CHAT_MSGS,curr);
-	curr = removed->next;
+	printf("removing node %d\n",index);
+	node_t* next = curr->next;
+	remove_node(UNSEQ_CHAT_MSGS,curr);
+	curr = next;
       }
       else
+      {
+	printf("not removing node %d\n",index);
 	curr = curr->next;
+      }
+      index++;
     }
-    pthread_mutex_unlock(&UNSEQ_CHAT_MSGS->mutex);
+    printf("CLEARED BACKLOG\n");
+    //    pthread_mutex_unlock(&UNSEQ_CHAT_MSGS->mutex);
+    return;
 }
 
 void* fair_sequencing(void* t)
 {
-  pthread_mutex_lock(&me_mutex); //so we can't enter here until I know who I am
-  pthread_mutex_unlock(&me_mutex);
   while(1)
   {
+    pthread_mutex_lock(&me_mutex); //so we can't enter here until I know who I am
+    pthread_mutex_unlock(&me_mutex);
+    pthread_mutex_lock(&dump_backlog_mutex);
+    if(DUMP_BACKLOG)
+    {
+      dump_backlog();
+      DUMP_BACKLOG = FALSE;
+    }
+    pthread_mutex_unlock(&dump_backlog_mutex);
     pthread_mutex_lock(&CLIENTS->mutex);
     node_t* curr = CLIENTS->head;
-    while(me->isleader && curr != NULL)
+    while(me->isleader && curr != NULL && DUMP_BACKLOG == FALSE)
     {
       client_t* client = (client_t*)curr->elem;
       if(client->unseq_chat_msgs->head != NULL)
@@ -108,6 +127,7 @@ void* fair_sequencing(void* t)
       curr = curr->next;
     }
     pthread_mutex_unlock(&CLIENTS->mutex);
+
     usleep(FAIR_SEQ_WAIT);
   }
 
@@ -123,6 +143,11 @@ void sequence(chatmessage_t* message, packet_t* newpacket)
   pthread_mutex_lock(&seqno_mutex);
   if(firstmessage->messagetype == JOIN && SEQ_NO == -1) //my first message to display!
   {
+    SEQ_NO = firstmessage->seqnum;
+  }
+  if(firstmessage->seqnum > SEQ_NO)
+  {
+    printf("SEQUENCE OUT OF SYNC. Skipping Ahead by %d messages\n",firstmessage->seqnum-SEQ_NO);
     SEQ_NO = firstmessage->seqnum;
   }
   if(firstmessage->seqnum <= SEQ_NO)
@@ -379,7 +404,9 @@ void *receive_UDP(void* t)
 	case VICTORY:
 	  if (TRUE)
 	  {
+
 	  	client_t* client;
+		pthread_mutex_lock(&CLIENTS->mutex);
   	  	node_t* curr = CLIENTS->head;
   	  	while(curr != NULL)
   	  	{
@@ -387,20 +414,29 @@ void *receive_UDP(void* t)
     		if (strcmp(newpacket->packetbody, client->uid) == 0 && (client->isleader == FALSE))
 			{
 		  		pthread_mutex_lock(&seqno_mutex);
-			//	dump_backlog();
+		  		pthread_mutex_lock(&me_mutex);
+		  		pthread_mutex_lock(&dump_backlog_mutex);
+				if(client == me)
+				{
 		  		LEADER_SEQ_NO = SEQ_NO;
+				  DUMP_BACKLOG = TRUE;
+				}
+		  		pthread_mutex_unlock(&dump_backlog_mutex);
 		  		client->isleader = TRUE;
 		  		coup_propogated = TRUE;
+		  		pthread_mutex_unlock(&me_mutex);
 		  		pthread_mutex_unlock(&seqno_mutex);
 		  		break;
 			}
       		curr = curr->next;
   	  	}
+		pthread_mutex_unlock(&CLIENTS->mutex);
+
 	  }
-	  
 	  pthread_mutex_lock(&election_happening_mutex);
-      election_happening = FALSE;
-      pthread_mutex_unlock(&election_happening_mutex);
+	  election_happening = FALSE;
+	  pthread_mutex_unlock(&election_happening_mutex);
+	  
 	  free_packet(newpacket);
 	  break;
 	case QUORUMRESPONSE:
@@ -725,7 +761,9 @@ void multicast_UDP(packettype_t packettype, char sender[], char senderuid[], cha
         
 	if (inet_aton(((client_t*)curr->elem)->hostname, &addr.sin_addr)==0) {
 	  fprintf(stderr, "inet_aton() failed\n");
-	  exit(1);
+	  curr = curr->next;
+	  continue;
+	  //	  exit(1);
 	}
 
 

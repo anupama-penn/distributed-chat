@@ -342,6 +342,7 @@ int main(int argc, char* argv[]){
   UIRUNNING = atoi(runui);
   LOCALHOSTNAME = "127.0.0.1";
   UID_COUNTER = 0;
+  DUMP_BACKLOG = FALSE;
   pthread_mutex_lock(&me_mutex); //so we don't try to access the me variable before it's set
   if(argc == 5)
   {
