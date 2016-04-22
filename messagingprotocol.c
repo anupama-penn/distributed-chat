@@ -77,7 +77,7 @@ void dump_backlog()
     }
     printf("DUMPING BACKLOG\n");
     pthread_mutex_unlock(&UNSEQ_CHAT_MSGS->mutex);
-    curr = UNSEQ_CHAT_MSGS->head;
+    /*    curr = UNSEQ_CHAT_MSGS->head;
     int index = 0;
     while(curr != NULL)
     {
@@ -96,7 +96,7 @@ void dump_backlog()
       }
       index++;
     }
-    printf("CLEARED BACKLOG\n");
+    printf("CLEARED BACKLOG\n");*/
     //    pthread_mutex_unlock(&UNSEQ_CHAT_MSGS->mutex);
     return;
 }
@@ -414,7 +414,6 @@ void *receive_UDP(void* t)
     		if (strcmp(newpacket->packetbody, client->uid) == 0 && (client->isleader == FALSE))
 			{
 		  		pthread_mutex_lock(&seqno_mutex);
-		  		pthread_mutex_lock(&me_mutex);
 		  		pthread_mutex_lock(&dump_backlog_mutex);
 				if(client == me)
 				{
@@ -422,10 +421,11 @@ void *receive_UDP(void* t)
 				  DUMP_BACKLOG = TRUE;
 				}
 		  		pthread_mutex_unlock(&dump_backlog_mutex);
-		  		client->isleader = TRUE;
-		  		coup_propogated = TRUE;
-		  		pthread_mutex_unlock(&me_mutex);
 		  		pthread_mutex_unlock(&seqno_mutex);
+				pthread_mutex_lock(&me_mutex);
+		  		client->isleader = TRUE;
+		  		pthread_mutex_unlock(&me_mutex);
+		  		coup_propogated = TRUE;
 		  		break;
 			}
       		curr = curr->next;
