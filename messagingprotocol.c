@@ -157,12 +157,12 @@ void sequence(chatmessage_t* message, packet_t* newpacket)
     if(firstmessage->messagetype == CHAT)
     {
       printf("\E[34m%s\E(B\E[m (sequenced: %d):\t%s\n", firstmessage->sender, firstmessage->seqnum,firstmessage->messagebody);
-      firstclientmatchbyname = find_first_client_by_username(firstmessage->sender);
+      firstclientmatchbyname = find_client_by_uid(firstmessage->senderuid);
     }
     else
     {
       printf("\E[34m%s\E(B\E[m joined the chat (sequenced: %d)\n", firstmessage->messagebody, firstmessage->seqnum);
-      firstclientmatchbyname = find_first_client_by_username(firstmessage->messagebody);
+      firstclientmatchbyname = find_client_by_uid(firstmessage->senderuid);
     }
 
     //    char* hostname = "";
@@ -321,7 +321,7 @@ void *receive_UDP(void* t)
 	    // send udp message to sender saying that this client is still alive
 	    // printf("I (%s) am gonna send alive response to (%s)\n", me->username, newpacket->sender);
 	    
-	    client_t* orig_sender = find_first_client_by_username(newpacket->sender);
+	    client_t* orig_sender = find_client_by_uid(newpacket->senderuid);
 	    if (orig_sender != NULL)
 	    {
 	    	send_UDP(CHECKUP, me->username, me->uid,newpacket->uid, "I_AM_ALIVE", orig_sender);
@@ -332,7 +332,7 @@ void *receive_UDP(void* t)
 	    // reset sender's counter back to zero
 	    // printf("Got living confirmation from (%s)\n", newpacket->sender);
 	    
-	    client_t* orig_sender = find_first_client_by_username(newpacket->sender); //Should fix this to use senderuid
+	    client_t* orig_sender = find_client_by_uid(newpacket->senderuid);
 	    if (orig_sender != NULL)
 	    {
         	pthread_mutex_lock(&missed_checkups_mutex);

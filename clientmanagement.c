@@ -136,20 +136,6 @@ void remove_client_by_uid(char uid[])
   client = NULL;
 }
 
-client_t* find_first_client_by_username(char username[])
-{
-  client_t* client;
-  node_t* curr = CLIENTS->head;
-  while(curr != NULL)
-  {
-    client = ((client_t*)curr->elem);
-    if(strcmp(username,client->username) == 0)
-      return client;
-    curr = curr->next;
-  }
-  return NULL;
-}
-
 client_t* find_client_by_uid(char uid[])
 {
   client_t* client;
