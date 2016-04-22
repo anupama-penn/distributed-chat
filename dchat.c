@@ -219,7 +219,6 @@ void holdElection() {
   coup_propogated = FALSE;
   time_t start;
   start = clock();
-  int num_votes = 0;
   while (election_happening)
   {
     if (me->isCandidate)
@@ -227,15 +226,10 @@ void holdElection() {
       char uid[MAXUIDLEN];
       get_new_uid(uid);
       multicast_UDP(VOTE, me->username, me->uid, uid, "I_SHOULD_LEAD");
-      usleep(ELECTION_SLEEP_INTERVAL_MS);
     }
-    num_votes = countVotes();
-    if (num_votes == (CLIENTS->numnodes))
+    if (countVotes() == CLIENTS->numnodes)
     {
       stage_coup(me->uid);
-      pthread_mutex_lock(&election_happening_mutex);
-      election_happening = FALSE;
-      pthread_mutex_unlock(&election_happening_mutex);
     }
     else
     {
@@ -247,22 +241,18 @@ void holdElection() {
           char uid[MAXUIDLEN];
           get_new_uid(uid);
           multicast_UDP(VOTE, me->username, me->uid, uid, "I_SHOULD_LEAD");
-          usleep(ELECTION_SLEEP_INTERVAL_MS);
         }
-        num_votes = countVotes();
-        if (num_votes > (CLIENTS->numnodes / 2))
+        if (countVotes() > (CLIENTS->numnodes / 2))
         {
           stage_coup(me->uid);
-          pthread_mutex_lock(&election_happening_mutex);
-          election_happening = FALSE;
-          pthread_mutex_unlock(&election_happening_mutex);
         }
       }
     }
+    usleep(ELECTION_SLEEP_INTERVAL_MS);
   }
   while (!coup_propogated)
   {
-
+    
   }
 }
 
