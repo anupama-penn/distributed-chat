@@ -719,6 +719,8 @@ void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid
       exit(1);
     }
   }
+  shutdown(fd, SHUT_RDWR);
+  close(fd);
   pthread_mutex_unlock(&messaging_mutex);
 }
 
@@ -776,6 +778,8 @@ void multicast_UDP(packettype_t packettype, char sender[], char senderuid[], cha
 
 	curr = curr->next;
     }
+    shutdown(fd, SHUT_RDWR);
+    close(fd);
     pthread_mutex_unlock(&messaging_mutex);
     //close(fd);
 }

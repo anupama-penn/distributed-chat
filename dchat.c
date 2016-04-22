@@ -222,6 +222,7 @@ void holdElection() {
   int num_votes = 0;
   while (election_happening)
   {
+    printf("campaigning\n");
     if (me->isCandidate)
     {
       char uid[MAXUIDLEN];
