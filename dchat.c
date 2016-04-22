@@ -25,39 +25,6 @@ bool initialize_data_structures() {
   return TRUE;
 }
 
-/*
-//TODO a long time from now or probably never
-void destroy_data_structures() {
-
-    if (initialized == TRUE) {
-        if (clients != NULL) {
-            if (clients -> clientlist.clientlist_val != NULL) {
-                free(clients->clientlist.clientlist_val);
-            }
-            free(clients);
-        }
-        if (msg_buffer != NULL) {
-            if (msg_buffer->msg_send !=NULL) {
-                free(msg_buffer->msg_send);
-            }
-            if (msg_buffer->user_sent !=NULL) {
-                free(msg_buffer->user_sent);
-            }
-            //no need to free seq_num and MSG type
-        }
-    }
-    }*/
-
-/*
-void shutdown(){
-n    
-    destroy_data_structures();
-    exit(0);
-check    return NULL;
-}
-
-*/
-
 void get_new_uid(char uid[])
 {
   pthread_mutex_lock(&counter_mutex);
@@ -130,15 +97,6 @@ void *checkup_on_clients(void* t)
       ((client_t*)curr->elem)->missed_checkups++;
       pthread_mutex_unlock(&missed_checkups_mutex);
 
-      /*
-      // Just for debugging purposes to see the current status of missed_checkups for each client
-
-      printf("%s %s: %d %d\n",((client_t*)curr->elem)->username,
-     ((client_t*)curr->elem)->hostname,
-     ((client_t*)curr->elem)->portnum,
-     ((client_t*)curr->elem)->missed_checkups);
-*/
-          
       // check if anyone has missed too many checkups
       if (((client_t*)curr->elem)->missed_checkups >= CHECKUP_DEATH_TIMELIMIT)
       {
@@ -252,16 +210,21 @@ void holdElection() {
   }
   while (!coup_propogated)
   {
-    
+    printf("Waiting for election results...\n");
+     usleep(ELECTION_SLEEP_INTERVAL_MS);
   }
 }
 
 void stage_coup(char incoming_power[])
 {
-  char uid[MAXUIDLEN];
-  get_new_uid(uid);
-  multicast_UDP(VICTORY, me->username, me->uid, uid, incoming_power);
+  while (!coup_propogated && election_happening)
+  {
+    char uid[MAXUIDLEN];
+    get_new_uid(uid);
+    multicast_UDP(VICTORY, me->username, me->uid, uid, incoming_power);
 //  printf("(%s) is now the new leader\n", incoming_power);
+    usleep(ELECTION_SLEEP_INTERVAL_MS);
+  }
   return;
 }
 
@@ -393,16 +356,6 @@ int main(int argc, char* argv[]){
   }
   else
   {
-    /*    if(LOCALPORT == 6000)
-    {
-      add_client("i_am_leader","127.0.0.1",5000,TRUE);
-      add_client("i_am_follower","127.0.0.1",6000,FALSE);
-      //      SEQ_NO = 0;
-      //      LEADER_SEQ_NO = 0;
-      create_message_threads();
-      while(1);
-      return 0;
-      }*/
     add_client(LOCALUSERNAME,LOCALHOSTNAME,LOCALPORT,TRUE);
     SEQ_NO = 0;
     LEADER_SEQ_NO = 0;
@@ -415,27 +368,5 @@ int main(int argc, char* argv[]){
     return 0;
   }
 
-  /*
-  if(strcmp(argv[1],"5000"))
-  {
-    LOCALPORT = 6000;
-  }
-  else if(strcmp(argv[1],"6000"))
-  {
-    LOCALPORT = 5000;    
-  }
-  LOCALHOSTNAME = "127.0.0.1";
-  printf("I'm %d\n",LOCALPORT);
-  //add the other fake guy
-  add_client("leader\0","127.0.0.1\0",5000,TRUE);
-  add_client("follower\0","127.0.0.1\0",6000,FALSE);
-
-  if(me->isleader)
-    printf("***I AM LEADER!!!***\n");
-
-  SEQ_NO = 0;
-  LEADER_SEQ_NO = 0;
-  create_message_threads();
-*/
   return 0;
 }

@@ -384,10 +384,10 @@ void *receive_UDP(void* t)
   	  	while(curr != NULL)
   	  	{
     		client = ((client_t*)curr->elem);
-    		if (strcmp(newpacket->packetbody, client->uid) == 0)
+    		if (strcmp(newpacket->packetbody, client->uid) == 0 && (client->isleader == FALSE))
 			{
 		  		pthread_mutex_lock(&seqno_mutex);
-				dump_backlog();
+			//	dump_backlog();
 		  		LEADER_SEQ_NO = SEQ_NO;
 		  		client->isleader = TRUE;
 		  		coup_propogated = TRUE;
@@ -617,38 +617,7 @@ void *receive_UDP(void* t)
 	  printf("\nUnrecognized packet type: %d\n", newpacket->packettype);
 	  free_packet(newpacket);
 	}
-
-	//begin sequencing stuff from 
-	/*
-        
-        msg_recv* message_got = parseMessage(&buf);
-        
-        enqueue(queue, message_got);
-        
-        msg_recv* next_message_got = dequeue(queue);
-        
-        if (squence = -1) {
-            squence = (*next_message_got).seq_num;
-        }
-        else if((*next_message_got).seq_num > squence){
-            int targetMessage = (*next_message_got).seq_num;
-            squence ++;
-        
-            while (squence <targetMessage) {
-            
-                printf("redelivery of messages is requested");
-            
-                next_message_got = retry(&squence);
-            
-                printf("%s: %s\n", (*next_message_got).user_sent, (*next_message_got).msg_sent);
-            
-                squence++;
-            }
-        }
-        
-        squence ++;
-        printf("%s: %s\n", (*next_message_got).user_sent, (*next_message_got).msg_sent);
-	*/    
+ 
     }//end of while
     pthread_exit((void *)t);
 }
