@@ -9,8 +9,6 @@ void error(char *x){
   exit(1);
 }
 
-// add some way to check if client is alive
-
 bool initialize_data_structures() {
     
   UNSEQ_CHAT_MSGS = (llist_t*) malloc(sizeof(llist_t));
@@ -75,8 +73,6 @@ void *get_user_input(void* t)
 
 void *checkup_on_clients(void* t)
 {
-
-  int counter = 1;
   pthread_mutex_lock(&election_happening_mutex);
   election_happening = FALSE;
   pthread_mutex_unlock(&election_happening_mutex);
@@ -103,11 +99,7 @@ void *checkup_on_clients(void* t)
         //Only leader can trigger quorum to remove dead clients
         if (me->isleader)
         {
-       //   pthread_mutex_unlock(&CLIENTS->mutex);
-          bool quorum_to_kill = check_quorum_on_client_death(((client_t*)curr->elem)->uid);
-        //  pthread_mutex_lock(&CLIENTS->mutex);
-
-          if (quorum_to_kill)
+          if (check_quorum_on_client_death(((client_t*)curr->elem)->uid))
           {
           //  print_info_with_senderids(((client_t*)curr->elem)->username,"has gone offline",((client_t*)curr->elem)->hostname,((client_t*)curr->elem)->portnum);
             char uid[MAXUIDLEN];
@@ -120,14 +112,12 @@ void *checkup_on_clients(void* t)
           // If me is not the leader then check if the thought-to-be-dead node is
           if (((client_t*)curr->elem)->isleader)
           {
-            bool quorum_to_kill = check_quorum_on_client_death(((client_t*)curr->elem)->uid);
-            if (quorum_to_kill)
+            if (check_quorum_on_client_death(((client_t*)curr->elem)->uid))
             {
               char uid[MAXUIDLEN];
               get_new_uid(uid);
               pthread_mutex_unlock(&CLIENTS->mutex);
               multicast_UDP(EXIT, me->username, me->uid, uid, ((client_t*)curr->elem)->uid);
-          //    printf("OH MAN, O-MAN! I can't believe the leader is dead\n");
               get_new_uid(uid);
               multicast_UDP(ELECTION,me->username, me->uid, uid, "INITIATE_ELECTION"); // multicast checkup message to everyone
               pthread_mutex_lock(&election_happening_mutex);
@@ -141,9 +131,6 @@ void *checkup_on_clients(void* t)
       curr = curr->next;
     }
     pthread_mutex_unlock(&CLIENTS->mutex);
-  //  print_client_list();
-    counter++;
-   // printf("%d\n", election_happening);
     if (election_happening)
     {
       holdElection();
@@ -163,8 +150,6 @@ int countVotes() {
     {
       temp_votes++;
     }
-  //  client_t* curr_boss = find_client_by_uid(((client_t*)curr->elem)->deferent_to);
- //   printf("(%s) is voting for (%s))\n", ((client_t*)curr->elem)->username, curr_boss->username);
     curr = curr->next;
   }
   pthread_mutex_unlock(&client_deference_mutex);
@@ -191,26 +176,17 @@ void holdElection() {
     }
     else
     {
-      if (clock()-start > ELECTION_TIMEOUT_MS)
+      if ((clock()-start > ELECTION_TIMEOUT_MS) && (countVotes() > (CLIENTS->numnodes / 2)) )
       {
-        // Do timeout condition
-        if (me->isCandidate)
-        {
-          char uid[MAXUIDLEN];
-          get_new_uid(uid);
-          multicast_UDP(VOTE, me->username, me->uid, uid, "I_SHOULD_LEAD");
-        }
-        if (countVotes() > (CLIENTS->numnodes / 2))
-        {
-          stage_coup(me->uid);
-        }
+        // Handle timeout condition
+        stage_coup(me->uid);
       }
     }
     usleep(ELECTION_SLEEP_INTERVAL_MS);
   }
   while (!coup_propogated)
   {
-    printf("Waiting for election results...\n");
+   //  printf("Waiting for election results...\n");
      usleep(ELECTION_SLEEP_INTERVAL_MS);
   }
 }
@@ -222,7 +198,6 @@ void stage_coup(char incoming_power[])
     char uid[MAXUIDLEN];
     get_new_uid(uid);
     multicast_UDP(VICTORY, me->username, me->uid, uid, incoming_power);
-//  printf("(%s) is now the new leader\n", incoming_power);
     usleep(ELECTION_SLEEP_INTERVAL_MS);
   }
   return;

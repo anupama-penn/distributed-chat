@@ -2,7 +2,6 @@
 
 void print_client_list() {
   int numclients = CLIENTS->numnodes;
-    
   printf("Total # of Clients:\t%d\n", numclients);
 
   node_t* curr = CLIENTS->head;
@@ -11,9 +10,10 @@ void print_client_list() {
     printf("%s %s: %d",((client_t*)curr->elem)->username,
 	   ((client_t*)curr->elem)->hostname,
 	   ((client_t*)curr->elem)->portnum);
-
     if(((client_t*)curr->elem)->isleader == TRUE)
-            printf(" I...am...LEADER!!!");
+    {
+      printf(" I...am...LEADER!!!");
+    }    
     printf("\n");
     curr = curr->next;
   }
