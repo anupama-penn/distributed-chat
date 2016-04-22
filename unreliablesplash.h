@@ -85,6 +85,7 @@ window_t* focuswnd;
 window_t* focusable_wnds[3];
 int focusindex;
 
+void splash();
 void initui(int isdebug);
 user_t* add_user(char* username, char uid[]);
 void print_msg(char* user, char message[]);

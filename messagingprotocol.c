@@ -62,7 +62,6 @@ void exit_chat(chatmessage_t* message){
 
 void dump_backlog()
 {
-  printf("ASSESSING BACKLOG\n");
     pthread_mutex_lock(&UNSEQ_CHAT_MSGS->mutex);
     node_t* curr = UNSEQ_CHAT_MSGS->head;
     while(curr != NULL)
@@ -75,7 +74,6 @@ void dump_backlog()
       }
       curr = curr->next;
     }
-    printf("DUMPING BACKLOG\n");
     pthread_mutex_unlock(&UNSEQ_CHAT_MSGS->mutex);
     /*    curr = UNSEQ_CHAT_MSGS->head;
     int index = 0;
@@ -156,12 +154,12 @@ void sequence(chatmessage_t* message, packet_t* newpacket)
     client_t* firstclientmatchbyname;
     if(firstmessage->messagetype == CHAT)
     {
-      printf("\E[34m%s\E(B\E[m (sequenced: %d):\t%s\n", firstmessage->sender, firstmessage->seqnum,firstmessage->messagebody);
+      //      printf("\E[34m%s\E(B\E[m (sequenced: %d):\t%s\n", firstmessage->sender, firstmessage->seqnum,firstmessage->messagebody);
       firstclientmatchbyname = find_client_by_uid(firstmessage->senderuid);
     }
     else
     {
-      printf("\E[34m%s\E(B\E[m joined the chat (sequenced: %d)\n", firstmessage->messagebody, firstmessage->seqnum);
+      //      printf("\E[34m%s\E(B\E[m joined the chat (sequenced: %d)\n", firstmessage->messagebody, firstmessage->seqnum);
       firstclientmatchbyname = find_client_by_uid(firstmessage->senderuid);
     }
 
@@ -290,7 +288,7 @@ void *receive_UDP(void* t)
 
 	  //for now, just print if it's complete
 	  if(message->iscomplete)
-	    printf("\E[33m%s\E(B\E[m (not sequenced):\t%s\n", message->sender, message->messagebody);
+	    printf("\E[33m%s\E(B\E[m (not sequenced yet):\t%s\n", message->sender, message->messagebody);
 
 	  //check the stray sequencing list. If there's already something in there that matches, remove it and add the message to the priority queue.
 	  process_late_sequence(message, newpacket);

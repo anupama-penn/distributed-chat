@@ -53,7 +53,6 @@ void *get_user_input(void* t)
   {
     while(1)
     {
-      printf("userinput: ");
       fgets(userinput, sizeof(userinput), stdin);
       if(userinput[0] == '\n')
 	continue;
@@ -303,6 +302,7 @@ void discover_ip(){
 
 int main(int argc, char* argv[]){
     
+  splash();
   initialize_data_structures();
 
   UIRUNNING = 0;

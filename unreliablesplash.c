@@ -22,7 +22,7 @@ void splash()
   printf("\E[1m                                           \E[37m$$ \E[36mくコ:彡           \E[34mくコ8ミ      \E[36mくコB彡       \E[37m$$\E(B\E[m\n");
   printf("\E[1m\E[37m  $$$$$$$$$$  \E[34mくコ8彡 \E[37m#1  \E[25m\E[33mSpencer Caplan\E[25m   \E[37m$$       \E[33m\E[5mHow so Blur?\E[25m     \E[36mくコBミ       \E[34mくコ8彡 \E[37m$$\E(B\E[m\n");
   printf("\E[1m\E[37m  $$$$  $$$$  \E[36mくコ:ミ \E[37m#2  \E[25m\E[33mJordan~ Kodner\E[25m   \E[37m$$                                              \E[37m$$\E(B\E[m\n");
-  printf("\E[1m\E[37m  $$$$$$$$$$  \E[34mくコB彡 \E[37m#3  \E[25m\E[33mAnupama Kumar~\E[25m   \E[37m*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$*\E(B\E[m\n");
+  printf("\E[1m\E[37m  $$$$$$$$$$  \E[34mくコB彡 \E[37m#3  \E[25m\E[33mAnupama くコ:ミ\E[25m  \E[37m*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$*\E(B\E[m\n");
   printf("\n");
 }
 
@@ -70,8 +70,8 @@ void *splashcurses(void *t)
   wattroff(splashwnd->window,COLOR_PAIR(4));
   wattron(splashwnd->window,COLOR_PAIR(3));
   mvwaddwstr(splashwnd->window,18,27,L"Spencer Caplan");
-  mvwaddwstr(splashwnd->window,19,27,L"Jordan~ Kodner");
-  mvwaddwstr(splashwnd->window,20,27,L"Anupama Kumar~");
+  mvwaddwstr(splashwnd->window,19,27,L"Jordan  Kodner");
+  mvwaddwstr(splashwnd->window,20,27,L"Anupama くコ:ミ");
   wattroff(splashwnd->window,COLOR_PAIR(3));
   pthread_mutex_unlock(&disp_mutex);
 
@@ -639,7 +639,7 @@ void print_msg_with_senderids(char* user, char message[], char uid[])
 {
   if(!UIRUNNING)
   {
-    printf("%s:\t%s\n",user,message);
+    printf("\E[1m\E[33m%s\E(B\E[m:\t%s\n",user,message);
     return;
   }
   pthread_mutex_lock(&initui_mutex);
@@ -670,7 +670,7 @@ void print_info_with_senderids(char* user, char message[], char uid[])
 {
   if(!UIRUNNING)
   {
-    printf("%s:\t%s\n",user,message);
+    printf("\E[1m\E[36m%s\E(B\E[m:\t%s\n",user,message);
     return;
   }
   pthread_mutex_lock(&initui_mutex);
