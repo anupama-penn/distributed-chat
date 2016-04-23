@@ -163,15 +163,12 @@ void sequence(chatmessage_t* message, packet_t* newpacket)
       firstclientmatchbyname = find_client_by_uid(firstmessage->senderuid);
     }
 
-    //    char* hostname = "";
-    //    int portnum = -1;
     char* uid = "";
 	    
     if(firstclientmatchbyname != NULL)
     {
-      //      hostname = firstclientmatchbyname->hostname;
-      //      portnum = firstclientmatchbyname->portnum;
       uid = firstclientmatchbyname->uid;
+      remove_elem(UNSEQ_CHAT_MSGS,firstmessage);
     }
     
     if(firstmessage->messagetype == CHAT)

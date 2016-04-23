@@ -267,7 +267,7 @@ uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist
   if(msguser == NULL)
   {
     msguser = add_user(user,uid);
-    printf("Added new user\n");
+    //    printf("Added new user\n");
   }
   else if(strcmp(msguser->username,user) != 0)
     strcpy(msguser->username,user);
