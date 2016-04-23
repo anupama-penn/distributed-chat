@@ -621,7 +621,7 @@ void* receive_UDP(void* t)
 	    //announcement that someone has successfully joined
 	  
 	    client_t* newclient = add_client(newusername,newip,newport,FALSE);
-	    print_info_with_senderids(newusername,"has joined the chat",newclient->uid);
+
 
 
 	    if(newport == LOCALPORT && strcmp(LOCALHOSTNAME,newip) == 0) //then I'm the guy who just joined
@@ -637,18 +637,22 @@ void* receive_UDP(void* t)
 		    strcpy(newusername,newusertest);
 		    strcpy(newip,strtok(NULL,":"));
 		    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
+		    client_t* addedclient;
 		    if(usernum == 1)
 		    {
-		      client_t* newleader = add_client(newusername,newip,newport,TRUE);
-		      print_info_with_senderids(newusername,"has approved your join request",newleader->uid);
+		      addedclient = add_client(newusername,newip,newport,TRUE);
+		      print_info_with_senderids(newusername,"has approved your join request",addedclient->uid);
+		      print_info_with_senderids(newusername,"Current Members:",addedclient->uid);
 		    }
 		    else
-		      add_client(newusername,newip,newport,FALSE);
-
+		      addedclient = add_client(newusername,newip,newport,FALSE);
+		      print_info_with_senderids(newusername,addedclient->uid,addedclient->uid);
 		    usernum++;
 		  }
 
 	      }
+	    else
+	      print_info_with_senderids(newusername,"has joined the chat",newclient->uid);
 	  }
 
 	  if(message->iscomplete && me->isleader)
