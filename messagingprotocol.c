@@ -216,16 +216,17 @@ void join_chat(client_t* jointome)
   free(jointome);
 }
 
-void *receive_UDP(void* t)
+void* receive_UDP(void* t)
 {
     struct sockaddr_in addr;
+    struct sockaddr_in other_addr;
     int fd;
     int nbytes;
     socklen_t addrlen;
     char buf[MAXPACKETLEN];
 
-    //fd = socket(PF_INET,SOCK_DGRAM,0);
-    fd = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+    fd = socket(AF_INET,SOCK_DGRAM,0);
+    //fd = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
     if (fd < 0) {
         perror("socket");
         exit(1);
@@ -250,10 +251,10 @@ void *receive_UDP(void* t)
     
     while (1) {
 
-        addrlen = sizeof(addr);
-        nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &addr,&addrlen);
+        addrlen = sizeof(other_addr);
+        nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &other_addr,&addrlen);
         
-	printf("RECEIVED: %s\n",buf);
+	//	printf("RECEIVED: %s\n",buf);
 
         if (nbytes <0) {
             perror("recvfrom");
@@ -717,8 +718,6 @@ void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid
     fprintf(stderr, "inet_pton() failed\n");
     exit(1);
   }
-  printf("Sending to ip %s:%d\n",sendtoclient->hostname,sendtoclient->portnum);
-  //  printf("Sending to ip %d:%d\n",&other_addr.sin_addr,*&other_addr.sin_port);
   
   pthread_mutex_lock(&messaging_mutex);
   int messageindex = 0;
