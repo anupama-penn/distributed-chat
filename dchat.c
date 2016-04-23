@@ -182,12 +182,12 @@ void holdElection() {
         stage_coup(me->uid);
       }
     }
-    usleep(ELECTION_SLEEP_INTERVAL_MS);
+    usleep(ELECTION_SLEEP_INTERVAL_uS);
   }
   while (!coup_propogated)
   {
    //  printf("Waiting for election results...\n");
-     usleep(ELECTION_SLEEP_INTERVAL_MS);
+     usleep(ELECTION_SLEEP_INTERVAL_uS);
   }
 }
 
@@ -198,7 +198,7 @@ void stage_coup(char incoming_power[])
     char uid[MAXUIDLEN];
     get_new_uid(uid);
     multicast_UDP(VICTORY, me->username, me->uid, uid, incoming_power);
-    usleep(ELECTION_SLEEP_INTERVAL_MS);
+    usleep(ELECTION_SLEEP_INTERVAL_uS);
   }
   return;
 }
