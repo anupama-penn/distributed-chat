@@ -47,7 +47,7 @@ void assign_sequence(chatmessage_t* message)
   pthread_mutex_unlock(&seqno_mutex);
 }
 
-void exit_chat(chatmessage_t* message){
+/*void exit_chat(chatmessage_t* message){
     
     char buffer[10];
     fgets(buffer,10,stdin);
@@ -58,7 +58,7 @@ void exit_chat(chatmessage_t* message){
       multicast_UDP(EXIT,me->username,me->uid,message->uid, NULL);
         
     }
-}
+}*/
 
 void dump_backlog()
 {

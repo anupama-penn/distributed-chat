@@ -53,7 +53,8 @@ void *get_user_input(void* t)
   {
     while(1)
     {
-      fgets(userinput, sizeof(userinput), stdin);
+      if(fgets(userinput, sizeof(userinput), stdin) == NULL)
+	exit(1);
       if(userinput[0] == '\n')
 	continue;
       for(i = 0; i < strlen(userinput); i++)
