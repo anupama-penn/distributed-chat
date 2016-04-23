@@ -732,7 +732,7 @@ int draw(char dc)
     //    wrefresh(msgwnd->window);
     return 1;
   }
-  if(dc == 127)
+  if(dc == 127)//backspace
   {
     waddch(focuswnd->window,' ');
 
@@ -960,7 +960,16 @@ void initui(int isdebug)
   while(1)
   {
     d = wgetch(focuswnd->window);
-    if(d == '\t')
+    if(d == 4) //ctrl d
+    {
+      del_wnd(splashwnd);
+      del_wnd(infownd);
+      del_wnd(inputwnd);
+      del_wnd(msgwnd);
+      endwin();
+      exit(1);
+    }
+    else if(d == '\t')
     {
       nextfocus();
     }
@@ -1044,7 +1053,11 @@ void initui(int isdebug)
 	else if (d == 'h')
 	{
 	  if(showhelp)
+	  {
 	    showhelp = 0;
+	    if(LAST_INFO_NODE == INFOS->tail && unreadmessages == 1)
+	      unreadinfos = 0;
+	  }
 	  else
 	    showhelp = 1;
 	  print_infos();
