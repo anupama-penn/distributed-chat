@@ -287,8 +287,8 @@ void discover_ip(char ip[]){
     for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next)
     {
       getnameinfo(ifa->ifa_addr,sizeof(struct sockaddr_in),host,NI_MAXHOST,NULL,0,NI_NUMERICHOST);
-      printf("\t Interface : <%s>\n",ifa->ifa_name );
-      printf("\t  Address : %s\n", host);
+  //    printf("\t Interface : <%s>\n",ifa->ifa_name );
+  //    printf("\t  Address : %s\n", host);
 
       if (ifa->ifa_addr->sa_family == AF_INET && strcmp(ifa->ifa_name,"em1") == 0) 
       {
