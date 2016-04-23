@@ -157,6 +157,8 @@ bool initialize_data_structures();
 
 void stage_coup(char incoming_power[]);
 
+void discover_ip(char ip[]);
+
 //void destroy_data_structures();
 
 // keep checking if sequencer is alive

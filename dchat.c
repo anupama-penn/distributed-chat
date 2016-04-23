@@ -275,10 +275,10 @@ void create_message_threads()
   //  pthread_join(threads[CHECKUP_THREADNUM], &exitstatus);
   //  pthread_join(threads[FAIRSEQ_THREADNUM], &exitstatus);
 }
-void discover_ip(){
+void discover_ip(char ip[]){
 
-    struct ifaddrs * ifAddrStruct = NULL;
-    struct ifaddrs * ifa=NULL;
+    struct ifaddrs* ifAddrStruct;
+    struct ifaddrs* ifa;
 
     char host[NI_MAXHOST];
     int s ;
@@ -287,15 +287,13 @@ void discover_ip(){
 
     for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next)
     {
-        s = getnameinfo(ifa->ifa_addr,sizeof(struct sockaddr_in),host,NI_MAXHOST,NULL,0,NI_NUMERICHOST);
-
-        //replace en0 with em1 interface in spec/eniac
-
-        if (ifa->ifa_addr->sa_family == AF_INET && strcmp(ifa->ifa_name,"en0") == 0) {
-
-            printf("\t  Address : %s\n", host);
-            printf("\t Interface : <%s>\n",ifa->ifa_name );
-
+      if (ifa->ifa_addr->sa_family == AF_INET && strcmp(ifa->ifa_name,"em1") == 0) 
+      {
+	  s = getnameinfo(ifa->ifa_addr,sizeof(struct sockaddr_in),host,NI_MAXHOST,NULL,0,NI_NUMERICHOST);
+	  //	  printf("\t Interface : <%s>\n",ifa->ifa_name );
+	  //	  printf("\t  Address : %s\n", host);
+	  strcpy(ip,host);
+	  break;
         }
     }
     if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
@@ -305,21 +303,25 @@ int main(int argc, char* argv[]){
     
   splash();
   initialize_data_structures();
+  char ip[NI_MAXHOST];
+  discover_ip(ip);
 
   UIRUNNING = 0;
 
-  printf("ENTER USERNAME: ");
-  scanf("%s",LOCALUSERNAME);
 
   char* localport = argv[1];
   char* runui = argv[argc-1];
 
   LOCALPORT = atoi(localport);
   UIRUNNING = atoi(runui);
-  LOCALHOSTNAME = "127.0.0.1";
+  //  LOCALHOSTNAME = "127.0.0.1";
+  LOCALHOSTNAME = ip;
   UID_COUNTER = 0;
   DUMP_BACKLOG = FALSE;
   pthread_mutex_lock(&me_mutex); //so we don't try to access the me variable before it's set
+  printf("Connecting Over %s:%s\n",ip,localport);
+  printf("ENTER USERNAME: ");
+  scanf("%s",LOCALUSERNAME);
   if(argc == 5)
   {
     SEQ_NO = -1;
