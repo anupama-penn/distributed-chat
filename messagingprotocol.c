@@ -670,25 +670,6 @@ void* receive_UDP(void* t)
     pthread_exit((void *)t);
 }
 
-// incomplete
-// discover IP address using name
-void getLocalIp(char *buf){
-    
-    bzero(buf,1024);
-    int sock = socket(AF_INET, SOCK_DGRAM, 0);
-    
-    // connect?
-    
-    //    struct sockaddr_in sockname;
-    //    socklen_t socknamelen = sizeof(sockname);
-    //    int err = getsockname(sock, (struct sockaddr*) &sockname, &socknamelen);
-
-
-    //    const char* p = inet_ntop(AF_INET, &sockname.sin_addr, buf, INET_ADDRSTRLEN);
-    close(sock);
-    return;
-}
-
 void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid[], char messagebody[], client_t* sendtoclient)
 {
     
