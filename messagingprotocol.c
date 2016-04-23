@@ -696,8 +696,11 @@ void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid
   other_addr.sin_port=htons(sendtoclient->portnum);
     
   if (inet_pton(AF_INET, sendtoclient->hostname, &other_addr.sin_addr)==0) { //check2
-    fprintf(stderr, "inet_pton() failed\n");
-    exit(1);
+    fprintf(stderr, "inet_pton() failed in send\n");
+    shutdown(fd, SHUT_RDWR);
+    close(fd);
+    pthread_mutex_unlock(&messaging_mutex);
+    //    exit(1);
   }
   
   pthread_mutex_lock(&messaging_mutex);
