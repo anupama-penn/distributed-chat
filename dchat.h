@@ -58,7 +58,7 @@
 };
 typedef enum bool_t bool_t;*/
 
-enum packettype { CHAT = 0, SEQUENCE = 1, CHECKUP = 2, ELECTION = 3, VOTE = 4, VICTORY = 5, JOIN_REQUEST = 6, LEADER_INFO = 7, JOIN = 8, EXIT = 9, QUORUMRESPONSE = 10, CONFIRMDEAD = 11};
+enum packettype { CHAT = 0, SEQUENCE = 1, CHECKUP = 2, ELECTION = 3, VOTE = 4, VICTORY = 5, JOIN_REQUEST = 6, LEADER_INFO = 7, JOIN = 8, EXIT = 9, QUORUMRESPONSE = 10, CONFIRMDEAD = 11, CONFIRMCOUP = 12};
 typedef enum packettype packettype_t;
 
 typedef struct packet_t {
