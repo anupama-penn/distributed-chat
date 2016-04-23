@@ -173,8 +173,6 @@ void sequence(chatmessage_t* message, packet_t* newpacket)
     
     if(firstmessage->messagetype == CHAT)
       print_msg_with_senderids(firstmessage->sender,firstmessage->messagebody, uid);
-    else if(firstmessage->messagetype == JOIN)
-      print_info_with_senderids(firstmessage->messagebody,"has joined the chat",uid);
     q_dequeue(HBACK_Q);
   }
   pthread_mutex_unlock(&seqno_mutex);
@@ -614,6 +612,8 @@ void *receive_UDP(void* t)
 	    //announcement that someone has successfully joined
 	  
 	    client_t* newclient = add_client(newusername,newip,newport,FALSE);
+	    print_info_with_senderids(newusername,"has joined the chat",newclient->uid);
+
 
 	    if(newport == LOCALPORT && strcmp(LOCALHOSTNAME,newip) == 0) //then I'm the guy who just joined
 	      {
@@ -644,7 +644,7 @@ void *receive_UDP(void* t)
 
 	  if(message->iscomplete && me->isleader)
 	  {
-	    printf("Immediately sequencing JOIN\n");
+	    //	    printf("Immediately sequencing JOIN\n");
 	    assign_sequence(message);
 	  }
 
