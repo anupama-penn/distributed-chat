@@ -532,7 +532,14 @@ void *receive_UDP(void* t)
 	  else //I'm the leader, so I can send JOIN
 	  {
 	    //	  printf("JOIN_REQUEST packet: %s\n",newpacket->packetbody);
-	    
+	    //check to make sure this client isn't already around
+	    char senderuid[MAXSENDERLEN];
+	    sprintf(senderuid,"%s:%d",newip,newport);
+	    if(find_client_by_uid(senderuid))
+	    {
+	      break;
+	    }
+
 	    strcpy(marshalledaddresses,newguy->username);
 	    strcat(marshalledaddresses,":");
 	    strcat(marshalledaddresses,newguy->hostname);
