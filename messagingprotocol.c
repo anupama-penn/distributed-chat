@@ -751,8 +751,8 @@ void multicast_UDP(packettype_t packettype, char sender[], char senderuid[], cha
         addr.sin_family=AF_INET;
         addr.sin_port=htons(((client_t*)curr->elem)->portnum);
         
-	if (inet_aton(((client_t*)curr->elem)->hostname, &addr.sin_addr)==0) {
-	  fprintf(stderr, "inet_aton() failed\n");
+	if (inet_pton(AF_INET,((client_t*)curr->elem)->hostname, &addr.sin_addr)==0) {
+	  fprintf(stderr, "inet_pton() failed in multicast\n");
 	  curr = curr->next;
 	  continue;
 	  //	  exit(1);
