@@ -1,5 +1,5 @@
 PARENTDIR=..
-CFLAGS=-g -Wall -pthread
+CFLAGS=-g -Wall -pthread -lm
 CC=gcc
 LDFLAGS=
 LIBS= -lncursesw

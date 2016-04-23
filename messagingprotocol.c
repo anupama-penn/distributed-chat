@@ -1,5 +1,6 @@
 #include "messagingprotocol.h"
 #include "clientmanagement.h"
+#include "bench.h"
 
 packet_t* parsePacket(char* buf){
   packet_t* input = malloc(sizeof(packet_t));
@@ -267,7 +268,8 @@ void* receive_UDP(void* t)
 	char newip[MAXPACKETBODYLEN];
 	int newport;
 	node_t* curr = STRAY_SEQ_MSGS->head;
-	//figure out what type of packet this is and act accordingly
+	//figure out what type of packet this is and act accordingly	
+
 	switch(newpacket->packettype)
 	{
 	case CHAT:
@@ -275,6 +277,10 @@ void* receive_UDP(void* t)
 	  //figure out if this corresponds to an existing chatmessage
 	  message = find_chatmessage(newpacket->uid);
 	  message = process_packet(message,newpacket);
+
+       	    char * dec_chat = decrypt(message->messagebody);
+            strcpy(message->messagebody,dec_chat);
+            //printf("please decrypted message is : %s\n", msgbody_send);
 
 	  if(message->iscomplete && me->isleader)
 	  {
@@ -285,7 +291,7 @@ void* receive_UDP(void* t)
 
 	  //for now, just print if it's complete
 	  if(message->iscomplete)
-	    printf("\E[33m%s\E(B\E[m (not sequenced yet):\t%s\n", message->sender, message->messagebody);
+	    printf("\E[33m%s\E(B\E[m (not bak sequenced yet):\t%s\n", message->sender, message->messagebody);
 
 	  //check the stray sequencing list. If there's already something in there that matches, remove it and add the message to the priority queue.
 	  process_late_sequence(message, newpacket);
@@ -295,6 +301,10 @@ void* receive_UDP(void* t)
 	case SEQUENCE:
 	  //This is a sequencing message. Find the corresponding chat message in the unsequenced message list and enqueue it properly
 	  message = find_chatmessage(newpacket->uid);
+	  
+		//char * dec_sequence = decrypt(message->messagebody);
+            //strcpy(message->messagebody,dec_sequence);
+
 	  //If the corresponding message is not complete, ask the leader for its missing part first. It will be received as a chat. TODO
 	  //if no message is found, put this sequencing packet in the stray sequencing list
 	  if(message == NULL)
@@ -310,7 +320,8 @@ void* receive_UDP(void* t)
 
 	  free_packet(newpacket);
 	  break;
-	case CHECKUP:
+	case CHECKUP:	
+
 	  if (strcmp(newpacket->packetbody,"ARE_YOU_ALIVE") == 0)
 	  {
 	    // send udp message to sender saying that this client is still alive
@@ -689,9 +700,13 @@ void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid
     fprintf(stderr, "SOCKET CREATION FAILED");
     exit(1);
   }
+  char * send = encrypt(messagebody);
+        char msgbody[MAXCHATMESSAGELEN];
+        strcpy(msgbody,send);
+//      printf("encrypted message in multicast is : %s\n", msgbody);
 
-  int totalpacketsrequired = (strlen(messagebody)) / 815;
-  int remainder =  strlen(messagebody) % MAXPACKETBODYLEN;
+  int totalpacketsrequired = (strlen(msgbody)) / 815;
+  int remainder =  strlen(msgbody) % MAXPACKETBODYLEN;
   if(remainder > 0)
     totalpacketsrequired++;
     
@@ -712,7 +727,7 @@ void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid
   int i = 0;
   for(i = 0; i < totalpacketsrequired; i++)
   {
-    strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
+    strncpy(packetbodybuf, msgbody+messageindex, MAXPACKETBODYLEN);
     messageindex += MAXPACKETBODYLEN;
 
     sprintf(packetbuf, "%s%s%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, senderuid, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
@@ -734,10 +749,16 @@ void multicast_UDP(packettype_t packettype, char sender[], char senderuid[], cha
     int fd;
     //    printf("prepping to send\n");
 
-    int totalpacketsrequired = (strlen(messagebody)) / 815; 
-    int remainder =  strlen(messagebody) % MAXPACKETBODYLEN; 
+	char * multicast = encrypt(messagebody);
+        char msgbody[MAXCHATMESSAGELEN];
+        strcpy(msgbody,multicast);
+//      printf("encrypted message in multicast is : %s\n", msgbody);
+  
+    int totalpacketsrequired = (strlen(msgbody)) / 815; 
+    int remainder =  strlen(msgbody) % MAXPACKETBODYLEN; 
     if(remainder > 0)
       totalpacketsrequired++;
+
     
     fd = socket(PF_INET,SOCK_DGRAM,0);
     
@@ -770,7 +791,7 @@ void multicast_UDP(packettype_t packettype, char sender[], char senderuid[], cha
 	int i;
 	for(i = 0; i < totalpacketsrequired; i++)
 	{
-	  strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
+	  strncpy(packetbodybuf, msgbody+messageindex, MAXPACKETBODYLEN);
 	  messageindex += MAXPACKETBODYLEN;
 
 	  sprintf(packetbuf, "%s%s%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, senderuid, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
