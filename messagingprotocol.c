@@ -415,7 +415,7 @@ void *receive_UDP(void* t)
 		  		pthread_mutex_lock(&dump_backlog_mutex);
 				if(client == me)
 				{
-		  		LEADER_SEQ_NO = SEQ_NO;
+		  		  LEADER_SEQ_NO = SEQ_NO;
 				  DUMP_BACKLOG = TRUE;
 				}
 		  		pthread_mutex_unlock(&dump_backlog_mutex);
@@ -424,6 +424,9 @@ void *receive_UDP(void* t)
 		  		client->isleader = TRUE;
 		  		pthread_mutex_unlock(&me_mutex);
 		  		coup_propogated = TRUE;
+		  		char uid[MAXUIDLEN];
+    			get_new_uid(uid);
+		  		multicast_UDP(CONFIRMCOUP,me->username, me->uid, uid, "LONG_LIVE_THE_NEW_KING"); 
 		  		break;
 			}
       		curr = curr->next;
@@ -435,6 +438,11 @@ void *receive_UDP(void* t)
 	  election_happening = FALSE;
 	  pthread_mutex_unlock(&election_happening_mutex);
 	  
+	  free_packet(newpacket);
+	  break;
+	case CONFIRMCOUP:
+	  // Update this nodes coup_propogated global
+	  coup_propogated = TRUE;
 	  free_packet(newpacket);
 	  break;
 	case QUORUMRESPONSE:
