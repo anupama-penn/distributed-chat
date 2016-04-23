@@ -216,16 +216,17 @@ void join_chat(client_t* jointome)
   free(jointome);
 }
 
-void *receive_UDP(void* t)
+void* receive_UDP(void* t)
 {
     struct sockaddr_in addr;
+    struct sockaddr_in other_addr;
     int fd;
     int nbytes;
     socklen_t addrlen;
     char buf[MAXPACKETLEN];
 
-    //fd = socket(PF_INET,SOCK_DGRAM,0);
-    fd = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+    fd = socket(AF_INET,SOCK_DGRAM,0);
+    //fd = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
     if (fd < 0) {
         perror("socket");
         exit(1);
@@ -235,9 +236,9 @@ void *receive_UDP(void* t)
     
     memset(&addr,0,sizeof(addr));
     addr.sin_family=AF_INET;
-    addr.sin_addr.s_addr=htonl(INADDR_ANY); /* N.B.: differs from sender */
+    addr.sin_addr.s_addr=htonl(INADDR_ANY);
     addr.sin_port=htons(LOCALPORT);
-    //    printf("Binding %d\n",LOCALPORT);
+    //printf("Binding %d\n",LOCALPORT);
     
     //bind to receive address
     
@@ -245,14 +246,15 @@ void *receive_UDP(void* t)
         perror("bind");
         exit(1);
     }
+
     pthread_mutex_unlock(&messaging_mutex);//unlocks lock from create_message_threads
     
     while (1) {
-        addrlen = sizeof(addr);
+
+        addrlen = sizeof(other_addr);
+        nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &other_addr,&addrlen);
         
-        nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &addr,&addrlen);
-        
-	// printf("RECEIVED: %s\n",buf);
+	//	printf("RECEIVED: %s\n",buf);
 
         if (nbytes <0) {
             perror("recvfrom");
@@ -708,15 +710,14 @@ void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid
   if(remainder > 0)
     totalpacketsrequired++;
     
-  /* set up destination address,where some client is listening or waiting to rx packets */
   memset(&other_addr,0,sizeof(other_addr));
   other_addr.sin_family=AF_INET;
   other_addr.sin_port=htons(sendtoclient->portnum);
     
-  //  if (inet_aton(((client_t*)curr->elem)->hostname, &other_addr.sin_addr)==0) { //check2
-  //    fprintf(stderr, "inet_aton() failed\n");
-  //    exit(1);
-  //  }
+  if (inet_pton(AF_INET, sendtoclient->hostname, &other_addr.sin_addr)==0) { //check2
+    fprintf(stderr, "inet_pton() failed\n");
+    exit(1);
+  }
   
   pthread_mutex_lock(&messaging_mutex);
   int messageindex = 0;
