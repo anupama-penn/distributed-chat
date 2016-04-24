@@ -4,8 +4,8 @@
 #include "messagemanagement.h"
 #include <ifaddrs.h>
 
-bool initialize_data_structures() {
-    
+bool initialize_data_structures()
+{
   UNSEQ_CHAT_MSGS = (llist_t*) malloc(sizeof(llist_t));
   CLIENTS = (llist_t*) malloc(sizeof(llist_t));
   STRAY_SEQ_MSGS = (llist_t*) malloc(sizeof(llist_t));

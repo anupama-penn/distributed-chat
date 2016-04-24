@@ -47,19 +47,6 @@ void assign_sequence(chatmessage_t* message)
   pthread_mutex_unlock(&seqno_mutex);
 }
 
-/*void exit_chat(chatmessage_t* message){
-    
-    char buffer[10];
-    fgets(buffer,10,stdin);
-    
-    if ((int) strtol(buffer,NULL,10) == 0) {
-        // now that ctrl+d has been pressed , do this
-        
-      multicast_UDP(EXIT,me->username,me->uid,message->uid, NULL);
-        
-    }
-}*/
-
 void dump_backlog()
 {
     pthread_mutex_lock(&UNSEQ_CHAT_MSGS->mutex);
@@ -256,428 +243,430 @@ void* receive_UDP(void* t)
 
     pthread_mutex_unlock(&messaging_mutex);//unlocks lock from create_message_threads
     
-    while (1) {
+    while (1)
+    {
 
-        addrlen = sizeof(other_addr);
-        nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &other_addr,&addrlen);
+      addrlen = sizeof(other_addr);
+      nbytes = recvfrom(fd,buf,MAXPACKETLEN,0,(struct sockaddr *) &other_addr,&addrlen);
         
 	//	printf("RECEIVED: %s\n",buf);
 
-        if (nbytes <0) {
-            perror("recvfrom");
-            exit(1);
+      if (nbytes <0)
+      {
+        perror("recvfrom");
+        exit(1);
+      }
+
+	    packet_t* newpacket = parsePacket(buf);
+	    chatmessage_t* message;
+	    char newusername[MAXSENDERLEN];
+      char newip[MAXPACKETBODYLEN];
+      int newport;
+    	node_t* curr = STRAY_SEQ_MSGS->head;
+    	//figure out what type of packet this is and act accordingly
+    	switch(newpacket->packettype)
+    	{
+    	case CHAT:
+
+    	  //figure out if this corresponds to an existing chatmessage
+    	  message = find_chatmessage(newpacket->uid);
+    	  message = process_packet(message,newpacket);
+
+    	  if(message->iscomplete && me->isleader)
+    	  {
+    	    client_t* sendingclient = find_client_by_uid(newpacket->senderuid);
+    	    add_elem(sendingclient->unseq_chat_msgs,(void*)message);
+    	    //assign_sequence(message);
+    	  }
+
+    	  //for now, just print if it's complete
+    	  if(message->iscomplete)
+    	    printf("\E[33m%s\E(B\E[m (not sequenced yet):\t%s\n", message->sender, message->messagebody);
+
+    	  //check the stray sequencing list. If there's already something in there that matches, remove it and add the message to the priority queue.
+    	  process_late_sequence(message, newpacket);
+
+    	  free_packet(newpacket);
+    	  break;
+    	case SEQUENCE:
+    	  //This is a sequencing message. Find the corresponding chat message in the unsequenced message list and enqueue it properly
+    	  message = find_chatmessage(newpacket->uid);
+    	  //If the corresponding message is not complete, ask the leader for its missing part first. It will be received as a chat. TODO
+    	  //if no message is found, put this sequencing packet in the stray sequencing list
+    	  if(message == NULL)
+    	  {
+    	    add_elem(STRAY_SEQ_MSGS,newpacket);
+    	    break;
+    	  }
+
+    	  sequence(message, newpacket);
+
+    	  //check if the front of the queue corresponds to our expected current sequence no. If so, print it. If not, we should wait or eventually ping the leader for it.
+
+    	  free_packet(newpacket);
+    	  break;
+    	case CHECKUP:
+    	  if (strcmp(newpacket->packetbody,"ARE_YOU_ALIVE") == 0)
+    	  {
+    	    // send udp message to sender saying that this client is still alive
+    	    client_t* orig_sender = find_client_by_uid(newpacket->senderuid);
+    	    if (orig_sender != NULL)
+    	    {
+    	    	send_UDP(CHECKUP, me->username, me->uid,newpacket->uid, "I_AM_ALIVE", orig_sender);
+    	    }
+    	  }
+    	  else if (strcmp(newpacket->packetbody, "I_AM_ALIVE") == 0)
+    	  {
+    	    // reset sender's counter back to zero
+    	    client_t* orig_sender = find_client_by_uid(newpacket->senderuid);
+    	    if (orig_sender != NULL)
+    	    {
+            pthread_mutex_lock(&missed_checkups_mutex);
+    	    	orig_sender->missed_checkups = 0;
+            pthread_mutex_unlock(&missed_checkups_mutex);
+    	    }
+    	  }
+    	  else
+    	  {
+    	    printf("\nUnrecognized value in checkup message!\n");
+    	  }
+        
+    	  free_packet(newpacket);
+    	  break;
+    	case ELECTION:
+       	pthread_mutex_lock(&election_happening_mutex);
+      	election_happening = TRUE;
+        pthread_mutex_unlock(&election_happening_mutex);
+        clear_deference();
+    	  free(newpacket);
+    	  break;
+    	case VOTE:
+        if (strcmp(newpacket->packetbody, "I_SHOULD_LEAD") == 0)
+        {
+        	//iterate over all clients and update their local deference accordingly
+        	pthread_mutex_lock(&CLIENTS->mutex);
+       	  pthread_mutex_lock(&client_deference_mutex);
+        	client_t* client;
+      		node_t* curr = CLIENTS->head;
+      		while(curr != NULL)
+      		{
+      			client = ((client_t*)curr->elem);
+      			if (strcmp(client->deferent_to, "IHAVENOsuperiors") == 0)
+      			{
+      				// Currently don't have an allegience yet
+      				// So I'll either support the sender or myself -- depending on who is more powerful
+      				if ((strcmp(client->uid,newpacket->senderuid)) < 0)
+      				{
+      					// Sender is greater than me, so support the sender and remove my candidates
+      					client->isCandidate = FALSE;
+      					snprintf(client->deferent_to, sizeof(client->deferent_to), "%s", newpacket->senderuid);
+      				}
+      				else if ((strcmp(client->uid,newpacket->senderuid)) >= 0)
+      				{
+      					// I am more powerful than the sender so support myself (and I'm still a candidate)
+      					snprintf(client->deferent_to, sizeof(me->deferent_to), "%s", client->uid);
+      				}
+      			}
+      			else
+      			{
+      				client_t* curr_leader = find_client_by_uid(client->deferent_to);
+      				if ((strcmp(curr_leader->uid,newpacket->senderuid)) < 0)
+      				{
+      					// My previous leader is less than sender's uid
+      					// So switch deference to sender
+      					snprintf(client->deferent_to, sizeof(client->deferent_to), "%s", newpacket->senderuid);
+      				}
+      				// else condition means that previous leader is greter than sender
+      				// So do nothing
+      			}
+    			curr = curr->next;
+      		}
+      		pthread_mutex_unlock(&CLIENTS->mutex);
+          pthread_mutex_unlock(&client_deference_mutex);
+
         }
+        free_packet(newpacket);
+        break;
+    	case VICTORY:
+    	  if (TRUE)
+    	  {
 
-	packet_t* newpacket = parsePacket(buf);
-	chatmessage_t* message;
-	char newusername[MAXSENDERLEN];
-	char newip[MAXPACKETBODYLEN];
-	int newport;
-	node_t* curr = STRAY_SEQ_MSGS->head;
-	//figure out what type of packet this is and act accordingly
-	switch(newpacket->packettype)
-	{
-	case CHAT:
+    	  	client_t* client;
+    		  pthread_mutex_lock(&CLIENTS->mutex);
+      	  node_t* curr = CLIENTS->head;
+      	  while(curr != NULL)
+      	  {
+        		client = ((client_t*)curr->elem);
+        		if (strcmp(newpacket->packetbody, client->uid) == 0 && (client->isleader == FALSE))
+      			{
+        		  pthread_mutex_lock(&seqno_mutex);
+        		  pthread_mutex_lock(&dump_backlog_mutex);
+        			if(client == me)
+        			{
+        		  	LEADER_SEQ_NO = SEQ_NO;
+        				DUMP_BACKLOG = TRUE;
+        			}
+        		  pthread_mutex_unlock(&dump_backlog_mutex);
+        		  pthread_mutex_unlock(&seqno_mutex);
+        			pthread_mutex_lock(&me_mutex);
+        		  client->isleader = TRUE;
+        		  pthread_mutex_unlock(&me_mutex);
+        		  coup_propogated = TRUE;
+        		  char uid[MAXUIDLEN];
+            	get_new_uid(uid);
+        		  multicast_UDP(CONFIRMCOUP,me->username, me->uid, uid, "LONG_LIVE_THE_NEW_KING"); 
+        		  break;
+      			}
+          	curr = curr->next;
+      	  }
+    		pthread_mutex_unlock(&CLIENTS->mutex);
 
-	  //figure out if this corresponds to an existing chatmessage
-	  message = find_chatmessage(newpacket->uid);
-	  message = process_packet(message,newpacket);
+    	  }
+    	  pthread_mutex_lock(&election_happening_mutex);
+    	  election_happening = FALSE;
+    	  pthread_mutex_unlock(&election_happening_mutex);
+    	  
+    	  free_packet(newpacket);
+    	  break;
+    	case CONFIRMCOUP:
+    	  // Update this nodes coup_propogated global
+        pthread_mutex_lock(&coup_propogated_mutex);
+    	  coup_propogated = TRUE;
+        pthread_mutex_unlock(&coup_propogated_mutex);
+    	  free_packet(newpacket);
+    	  break;
+    	case QUORUMRESPONSE:
 
-	  if(message->iscomplete && me->isleader)
-	  {
-	    client_t* sendingclient = find_client_by_uid(newpacket->senderuid);
-	    add_elem(sendingclient->unseq_chat_msgs,(void*)message);
-	    //assign_sequence(message);
-	  }
+    	// workaround for weird switch scope issues...
+    	  if (TRUE)
+    	  {
+    	  	client_t* orig_sender = find_client_by_uid(newpacket->senderuid);
+    	  	client_t* client_to_check = find_client_by_uid(newpacket->packetbody);
 
-	  //for now, just print if it's complete
-	  if(message->iscomplete)
-	    printf("\E[33m%s\E(B\E[m (not sequenced yet):\t%s\n", message->sender, message->messagebody);
+    		if (orig_sender != NULL && client_to_check != NULL)
+    		{
+    		  if (client_to_check->missed_checkups >= CHECKUP_DEATH_TIMELIMIT)
+    		  {
+    		    send_UDP(CONFIRMDEAD, me->username, me->uid,newpacket->uid, "YEP_THEY_ARE_DEAD", orig_sender);
+    		  }
+    		  else
+    		  {
+    		  	send_UDP(CONFIRMDEAD, me->username, me->uid,newpacket->uid, "NO_THEY_ARE_ALIVE", orig_sender);
+    		  }
+    		}
 
-	  //check the stray sequencing list. If there's already something in there that matches, remove it and add the message to the priority queue.
-	  process_late_sequence(message, newpacket);
+    	  }
+    	  free_packet(newpacket);
+    	  break;
 
-	  free_packet(newpacket);
-	  break;
-	case SEQUENCE:
-	  //This is a sequencing message. Find the corresponding chat message in the unsequenced message list and enqueue it properly
-	  message = find_chatmessage(newpacket->uid);
-	  //If the corresponding message is not complete, ask the leader for its missing part first. It will be received as a chat. TODO
-	  //if no message is found, put this sequencing packet in the stray sequencing list
-	  if(message == NULL)
-	  {
-	    add_elem(STRAY_SEQ_MSGS,newpacket);
-	    break;
-	  }
+    	case CONFIRMDEAD:
+      	if (strcmp(newpacket->packetbody,"YEP_THEY_ARE_DEAD") == 0)
+      	{
+      		num_clients_agree_on_death_call++;
+      	}
+      	else if (strcmp(newpacket->packetbody,"NO_THEY_ARE_ALIVE") == 0)
+      	{
+      		num_clients_disagree_on_death_call++;
+      	}
+      	else
+      	{
+      		printf("\nUnrecognized value in checkup message!\n");
+      	}
 
-	  sequence(message, newpacket);
+    	  free_packet(newpacket);
+    	  break;
+    	case JOIN_REQUEST:
+    	  //message from someone who wants to join
 
+    	  strcpy(newip,strtok(newpacket->packetbody,":"));
+    	  newport = atoi(strtok(NULL,IPPORTSTRDELIM));
+    	  printf("Receiving JOIN_REQUEST from: %s:%d\n",newip,newport);
+    	  client_t* newguy = create_client(newpacket->sender,newip,newport,FALSE);
+    	  
+    	  char marshalledaddresses[MAXCHATMESSAGELEN];
 
-	  //check if the front of the queue corresponds to our expected current sequence no. If so, print it. If not, we should wait or eventually ping the leader for it.
+    	  char uid[MAXUIDLEN];
+    	  get_new_uid(uid);
+    	  
+    	  //if I'm not the leader, send a LEADER_INFO
+    	  if(!me->isleader)
+    	  {
+    	    curr = CLIENTS->head;
+    	    pthread_mutex_lock(&CLIENTS->mutex);
+    	    client_t* leader = NULL;
+    	    while(curr != NULL)
+    	    {
+    	      client_t* client = (client_t*)curr->elem;
+    	      if(client->isleader)
+    	      {
+    		      leader = client;
+    		      break;
+    	      }
+    	      curr = curr->next;
+    	    }
+    	    if(leader == NULL) //don't respond. Let the new joiner timeout.
+    	    {
+    	      //	      printf("Can't process JOIN_REQUEST. Don't know who the leader is!!!\n");
+    	      //	      send_UDP(LEADER_INFO,me->username,me->uid,uid,"",newguy);
+    	      free(newguy);
+    	      free_packet(newpacket);
+    	      break;
+    	    }
 
-	  free_packet(newpacket);
-	  break;
-	case CHECKUP:
-	  if (strcmp(newpacket->packetbody,"ARE_YOU_ALIVE") == 0)
-	  {
-	    // send udp message to sender saying that this client is still alive
-	    client_t* orig_sender = find_client_by_uid(newpacket->senderuid);
-	    if (orig_sender != NULL)
-	    {
-	    	send_UDP(CHECKUP, me->username, me->uid,newpacket->uid, "I_AM_ALIVE", orig_sender);
-	    }
-	  }
-	  else if (strcmp(newpacket->packetbody, "I_AM_ALIVE") == 0)
-	  {
-	    // reset sender's counter back to zero
-	    client_t* orig_sender = find_client_by_uid(newpacket->senderuid);
-	    if (orig_sender != NULL)
-	    {
-        pthread_mutex_lock(&missed_checkups_mutex);
-	    	orig_sender->missed_checkups = 0;
-        pthread_mutex_unlock(&missed_checkups_mutex);
-	    }
-	  }
-	  else
-	  {
-	    printf("\nUnrecognized value in checkup message!\n");
-	  }
-    
-	  free_packet(newpacket);
-	  break;
-	case ELECTION:
-   	pthread_mutex_lock(&election_happening_mutex);
-  	election_happening = TRUE;
-    pthread_mutex_unlock(&election_happening_mutex);
-    clear_deference();
-	  free(newpacket);
-	  break;
-	case VOTE:
-    if (strcmp(newpacket->packetbody, "I_SHOULD_LEAD") == 0)
-    {
-    	//iterate over all clients and update their local deference accordingly
-    	pthread_mutex_lock(&CLIENTS->mutex);
-   	  pthread_mutex_lock(&client_deference_mutex);
-    	client_t* client;
-  		node_t* curr = CLIENTS->head;
-  		while(curr != NULL)
-  		{
-  			client = ((client_t*)curr->elem);
-  			if (strcmp(client->deferent_to, "IHAVENOsuperiors") == 0)
-  			{
-  				// Currently don't have an allegience yet
-  				// So I'll either support the sender or myself -- depending on who is more powerful
-  				if ((strcmp(client->uid,newpacket->senderuid)) < 0)
-  				{
-  					// Sender is greater than me, so support the sender and remove my candidates
-  					client->isCandidate = FALSE;
-  					snprintf(client->deferent_to, sizeof(client->deferent_to), "%s", newpacket->senderuid);
-  				}
-  				else if ((strcmp(client->uid,newpacket->senderuid)) >= 0)
-  				{
-  					// I am more powerful than the sender so support myself (and I'm still a candidate)
-  					snprintf(client->deferent_to, sizeof(me->deferent_to), "%s", client->uid);
-  				}
-  			}
-  			else
-  			{
-  				client_t* curr_leader = find_client_by_uid(client->deferent_to);
-  				if ((strcmp(curr_leader->uid,newpacket->senderuid)) < 0)
-  				{
-  					// My previous leader is less than sender's uid
-  					// So switch deference to sender
-  					snprintf(client->deferent_to, sizeof(client->deferent_to), "%s", newpacket->senderuid);
-  				}
-  				// else condition means that previous leader is greter than sender
-  				// So do nothing
-  			}
-			curr = curr->next;
-  		}
-  		pthread_mutex_unlock(&CLIENTS->mutex);
-      pthread_mutex_unlock(&client_deference_mutex);
+    	    pthread_mutex_unlock(&CLIENTS->mutex);
+    	    strcpy(marshalledaddresses,leader->username);
+    	    strcat(marshalledaddresses,":");
+    	    strcat(marshalledaddresses,leader->hostname);
+    	    char portbuf[10];
+    	    sprintf(portbuf,":%d",leader->portnum);
+    	    strcat(marshalledaddresses,portbuf);
 
-    }
-    free_packet(newpacket);
-    break;
-	case VICTORY:
-	  if (TRUE)
-	  {
+    	    printf("Sending LEADER_INFO to %s:%d\n",newguy->hostname,newguy->portnum);
+    	    send_UDP(LEADER_INFO,leader->username,leader->uid,uid,marshalledaddresses,newguy);
+    	  }
+    	  else //I'm the leader, so I can send JOIN
+    	  {
+    	    //	  printf("JOIN_REQUEST packet: %s\n",newpacket->packetbody);
+    	    //check to make sure this client isn't already around
+    	    char senderuid[MAXSENDERLEN];
+    	    sprintf(senderuid,"%s:%d",newip,newport);
+    	    if(find_client_by_uid(senderuid))
+    	    {
+    	      break;
+    	    }
 
-	  	client_t* client;
-		  pthread_mutex_lock(&CLIENTS->mutex);
-  	  node_t* curr = CLIENTS->head;
-  	  while(curr != NULL)
-  	  {
-    		client = ((client_t*)curr->elem);
-    		if (strcmp(newpacket->packetbody, client->uid) == 0 && (client->isleader == FALSE))
-  			{
-    		  pthread_mutex_lock(&seqno_mutex);
-    		  pthread_mutex_lock(&dump_backlog_mutex);
-    			if(client == me)
-    			{
-    		  	LEADER_SEQ_NO = SEQ_NO;
-    				DUMP_BACKLOG = TRUE;
-    			}
-    		  pthread_mutex_unlock(&dump_backlog_mutex);
-    		  pthread_mutex_unlock(&seqno_mutex);
-    			pthread_mutex_lock(&me_mutex);
-    		  client->isleader = TRUE;
-    		  pthread_mutex_unlock(&me_mutex);
-    		  coup_propogated = TRUE;
-    		  char uid[MAXUIDLEN];
-        	get_new_uid(uid);
-    		  multicast_UDP(CONFIRMCOUP,me->username, me->uid, uid, "LONG_LIVE_THE_NEW_KING"); 
-    		  break;
-  			}
-      	curr = curr->next;
-  	  }
-		pthread_mutex_unlock(&CLIENTS->mutex);
+    	    strcpy(marshalledaddresses,newguy->username);
+    	    strcat(marshalledaddresses,":");
+    	    strcat(marshalledaddresses,newguy->hostname);
+    	    char portbuf[10];
+    	    sprintf(portbuf,":%d",newguy->portnum);
+    	    strcat(marshalledaddresses,portbuf);
+    	    pthread_mutex_lock(&CLIENTS->mutex);
+    	    curr = CLIENTS->head;
+    	    while(curr != NULL)
+    	    {
+    	      strcat(marshalledaddresses,":");
+    	      strcat(marshalledaddresses,((client_t*)curr->elem)->username);
+    	      strcat(marshalledaddresses,":");
+    	      strcat(marshalledaddresses,((client_t*)curr->elem)->hostname);
+    	      //	    char portbuf[10];
+    	      sprintf(portbuf,":%d",((client_t*)curr->elem)->portnum);
+    	      strcat(marshalledaddresses,portbuf);
+    	      curr = curr->next;
+    	    }
+    	    pthread_mutex_unlock(&CLIENTS->mutex);
+    	    //	  printf("JOIN info:\t%s\n",marshalledaddresses);
 
-	  }
-	  pthread_mutex_lock(&election_happening_mutex);
-	  election_happening = FALSE;
-	  pthread_mutex_unlock(&election_happening_mutex);
-	  
-	  free_packet(newpacket);
-	  break;
-	case CONFIRMCOUP:
-	  // Update this nodes coup_propogated global
-    pthread_mutex_lock(&coup_propogated_mutex);
-	  coup_propogated = TRUE;
-    pthread_mutex_unlock(&coup_propogated_mutex);
-	  free_packet(newpacket);
-	  break;
-	case QUORUMRESPONSE:
+    	    printf("Sending JOIN to %s:%d\n",newguy->hostname,newguy->portnum);
+    	    send_UDP(JOIN,me->username,me->uid,uid,marshalledaddresses,newguy);
+    	    multicast_UDP(JOIN,me->username,me->uid,uid,marshalledaddresses);
+    	  }
+    	  free(newguy);
+    	  free_packet(newpacket);
+    	  break;
+    	case EXIT:
+    	  if (TRUE)
+    	  {
+    	  	client_t* client_to_kill = find_client_by_uid(newpacket->packetbody);
+    	  	if (client_to_kill != NULL)
+    	  	{
+    	  		print_info_with_senderids(client_to_kill->username,"has gone offline",client_to_kill->uid);
+    	  	}
+    	  }
+    	  
+    	  remove_client_by_uid(newpacket->packetbody);
+    	  free_packet(newpacket);
+    	  break;
+    	case LEADER_INFO:
+    	  //if someone asked to join, but they didn't ask the leader, instead of sending a JOIN, send them this. 
+    	  //If you receive this, repeat the JOIN_REQUEST, but to the leader. 
+    	  if(strlen(newpacket->packetbody) == 0)
+    	  {
+    	    printf("Got no LEADER_INFO. Trying again.\n");
+    	    strcpy(newip,strtok(newpacket->senderuid,IPPORTSTRDELIM));
+    	    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
+    	    client_t* jointome = create_client("",newip,newport,TRUE);
+    	    join_chat(jointome);
+    	  }
+    	  strtok(newpacket->packetbody,IPPORTSTRDELIM);
+    	  strcpy(newip,strtok(NULL,IPPORTSTRDELIM));
+    	  newport = atoi(strtok(NULL,IPPORTSTRDELIM));
+    	  printf("Receiving LEADER_INFO: %s:%d\n",newip,newport);
+    	  client_t* leader = create_client(newpacket->sender,newip,newport,FALSE);
+    	  join_chat(leader);
 
-	// workaround for weird switch scope issues...
-	  if (TRUE)
-	  {
-	  	client_t* orig_sender = find_client_by_uid(newpacket->senderuid);
-	  	client_t* client_to_check = find_client_by_uid(newpacket->packetbody);
+    	  free_packet(newpacket);
+    	  break;
+    	case JOIN:
 
-		if (orig_sender != NULL && client_to_check != NULL)
-		{
-		  if (client_to_check->missed_checkups >= CHECKUP_DEATH_TIMELIMIT)
-		  {
-		    send_UDP(CONFIRMDEAD, me->username, me->uid,newpacket->uid, "YEP_THEY_ARE_DEAD", orig_sender);
-		  }
-		  else
-		  {
-		  	send_UDP(CONFIRMDEAD, me->username, me->uid,newpacket->uid, "NO_THEY_ARE_ALIVE", orig_sender);
-		  }
-		}
+    	  //figure out if this corresponds to an existing chatmessage
+    	  message = find_chatmessage(newpacket->uid);
+    	  message = process_packet(message,newpacket);
 
-	  }
-	  free_packet(newpacket);
-	  break;
+    	  if(message->iscomplete)
+    	  {
 
-	case CONFIRMDEAD:
-	if (strcmp(newpacket->packetbody,"YEP_THEY_ARE_DEAD") == 0)
-	{
-		num_clients_agree_on_death_call++;
-	}
-	else if (strcmp(newpacket->packetbody,"NO_THEY_ARE_ALIVE") == 0)
-	{
-		num_clients_disagree_on_death_call++;
-	}
-	else
-	{
-		printf("\nUnrecognized value in checkup message!\n");
-	}
+    	    //read the first one off first
+    	    strcpy(newusername,strtok(message->messagebody,":"));
+    	    strcpy(newip,strtok(NULL,":"));
+    	    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
 
-	  free_packet(newpacket);
-	  break;
-	case JOIN_REQUEST:
-	  //message from someone who wants to join
-
-	  strcpy(newip,strtok(newpacket->packetbody,":"));
-	  newport = atoi(strtok(NULL,IPPORTSTRDELIM));
-	  printf("Receiving JOIN_REQUEST from: %s:%d\n",newip,newport);
-	  client_t* newguy = create_client(newpacket->sender,newip,newport,FALSE);
-	  
-	  char marshalledaddresses[MAXCHATMESSAGELEN];
-
-	  char uid[MAXUIDLEN];
-	  get_new_uid(uid);
-	  
-	  //if I'm not the leader, send a LEADER_INFO
-	  if(!me->isleader)
-	  {
-	    curr = CLIENTS->head;
-	    pthread_mutex_lock(&CLIENTS->mutex);
-	    client_t* leader = NULL;
-	    while(curr != NULL)
-	    {
-	      client_t* client = (client_t*)curr->elem;
-	      if(client->isleader)
-	      {
-		leader = client;
-		break;
-	      }
-	      curr = curr->next;
-	    }
-	    if(leader == NULL) //don't respond. Let the new joiner timeout.
-	    {
-	      //	      printf("Can't process JOIN_REQUEST. Don't know who the leader is!!!\n");
-	      //	      send_UDP(LEADER_INFO,me->username,me->uid,uid,"",newguy);
-	      free(newguy);
-	      free_packet(newpacket);
-	      break;
-	    }
-
-	    pthread_mutex_unlock(&CLIENTS->mutex);
-	    strcpy(marshalledaddresses,leader->username);
-	    strcat(marshalledaddresses,":");
-	    strcat(marshalledaddresses,leader->hostname);
-	    char portbuf[10];
-	    sprintf(portbuf,":%d",leader->portnum);
-	    strcat(marshalledaddresses,portbuf);
-
-	    printf("Sending LEADER_INFO to %s:%d\n",newguy->hostname,newguy->portnum);
-	    send_UDP(LEADER_INFO,leader->username,leader->uid,uid,marshalledaddresses,newguy);
-	  }
-	  else //I'm the leader, so I can send JOIN
-	  {
-	    //	  printf("JOIN_REQUEST packet: %s\n",newpacket->packetbody);
-	    //check to make sure this client isn't already around
-	    char senderuid[MAXSENDERLEN];
-	    sprintf(senderuid,"%s:%d",newip,newport);
-	    if(find_client_by_uid(senderuid))
-	    {
-	      break;
-	    }
-
-	    strcpy(marshalledaddresses,newguy->username);
-	    strcat(marshalledaddresses,":");
-	    strcat(marshalledaddresses,newguy->hostname);
-	    char portbuf[10];
-	    sprintf(portbuf,":%d",newguy->portnum);
-	    strcat(marshalledaddresses,portbuf);
-	    pthread_mutex_lock(&CLIENTS->mutex);
-	    curr = CLIENTS->head;
-	    while(curr != NULL)
-	    {
-	      strcat(marshalledaddresses,":");
-	      strcat(marshalledaddresses,((client_t*)curr->elem)->username);
-	      strcat(marshalledaddresses,":");
-	      strcat(marshalledaddresses,((client_t*)curr->elem)->hostname);
-	      //	    char portbuf[10];
-	      sprintf(portbuf,":%d",((client_t*)curr->elem)->portnum);
-	      strcat(marshalledaddresses,portbuf);
-	      curr = curr->next;
-	    }
-	    pthread_mutex_unlock(&CLIENTS->mutex);
-	    //	  printf("JOIN info:\t%s\n",marshalledaddresses);
-
-	    printf("Sending JOIN to %s:%d\n",newguy->hostname,newguy->portnum);
-	    send_UDP(JOIN,me->username,me->uid,uid,marshalledaddresses,newguy);
-	    multicast_UDP(JOIN,me->username,me->uid,uid,marshalledaddresses);
-	  }
-	  free(newguy);
-	  free_packet(newpacket);
-	  break;
-	case EXIT:
-	  if (TRUE)
-	  {
-	  	client_t* client_to_kill = find_client_by_uid(newpacket->packetbody);
-	  	if (client_to_kill != NULL)
-	  	{
-	  		print_info_with_senderids(client_to_kill->username,"has gone offline",client_to_kill->uid);
-	  	}
-	  }
-	  
-	  remove_client_by_uid(newpacket->packetbody);
-	  free_packet(newpacket);
-	  break;
-	case LEADER_INFO:
-	  //if someone asked to join, but they didn't ask the leader, instead of sending a JOIN, send them this. 
-	  //If you receive this, repeat the JOIN_REQUEST, but to the leader. 
-	  if(strlen(newpacket->packetbody) == 0)
-	  {
-	    printf("Got no LEADER_INFO. Trying again.\n");
-	    strcpy(newip,strtok(newpacket->senderuid,IPPORTSTRDELIM));
-	    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
-	    client_t* jointome = create_client("",newip,newport,TRUE);
-	    join_chat(jointome);
-	  }
-	  strtok(newpacket->packetbody,IPPORTSTRDELIM);
-	  strcpy(newip,strtok(NULL,IPPORTSTRDELIM));
-	  newport = atoi(strtok(NULL,IPPORTSTRDELIM));
-	  printf("Receiving LEADER_INFO: %s:%d\n",newip,newport);
-	  client_t* leader = create_client(newpacket->sender,newip,newport,FALSE);
-	  join_chat(leader);
-
-	  free_packet(newpacket);
-	  break;
-	case JOIN:
-
-	  //figure out if this corresponds to an existing chatmessage
-	  message = find_chatmessage(newpacket->uid);
-	  message = process_packet(message,newpacket);
-
-	  if(message->iscomplete)
-	  {
-
-	    //read the first one off first
-	    strcpy(newusername,strtok(message->messagebody,":"));
-	    strcpy(newip,strtok(NULL,":"));
-	    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
-
-	    //announcement that someone has successfully joined
-	  
-	    client_t* newclient = add_client(newusername,newip,newport,FALSE);
+    	    //announcement that someone has successfully joined
+    	  
+    	    client_t* newclient = add_client(newusername,newip,newport,FALSE);
 
 
+    	    if(newport == LOCALPORT && strcmp(LOCALHOSTNAME,newip) == 0) //then I'm the guy who just joined
+          {
+        		JOIN_SUCCESSFUL = TRUE;
+        		me = newclient;
+        		pthread_mutex_unlock(&me_mutex);
+        		int usernum = 1;
+        		while(1)
+        		  {
+        		    char* newusertest = strtok(NULL,":");
+        		    if(newusertest == NULL)
+        		      break;
+        		    strcpy(newusername,newusertest);
+        		    strcpy(newip,strtok(NULL,":"));
+        		    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
+        		    client_t* addedclient;
+        		    if(usernum == 1)
+        		    {
+        		      addedclient = add_client(newusername,newip,newport,TRUE);
+        		      print_info_with_senderids(newusername,"has approved your join request",addedclient->uid);
+        		      print_info_with_senderids(newusername,"Current Members:",addedclient->uid);
+        		    }
+        		    else
+        		      addedclient = add_client(newusername,newip,newport,FALSE);
+        		      print_info_with_senderids(newusername,addedclient->uid,addedclient->uid);
+        		    usernum++;
+        		  }
+          }
+    	    else
+          {
+            print_info_with_senderids(newusername,"has joined the chat",newclient->uid);
+          }
+    	      
+    	  }
 
-	    if(newport == LOCALPORT && strcmp(LOCALHOSTNAME,newip) == 0) //then I'm the guy who just joined
-	      {
-		JOIN_SUCCESSFUL = TRUE;
-		me = newclient;
-		pthread_mutex_unlock(&me_mutex);
-		int usernum = 1;
-		while(1)
-		  {
-		    char* newusertest = strtok(NULL,":");
-		    if(newusertest == NULL)
-		      break;
-		    strcpy(newusername,newusertest);
-		    strcpy(newip,strtok(NULL,":"));
-		    newport = atoi(strtok(NULL,IPPORTSTRDELIM));
-		    client_t* addedclient;
-		    if(usernum == 1)
-		    {
-		      addedclient = add_client(newusername,newip,newport,TRUE);
-		      print_info_with_senderids(newusername,"has approved your join request",addedclient->uid);
-		      print_info_with_senderids(newusername,"Current Members:",addedclient->uid);
-		    }
-		    else
-		      addedclient = add_client(newusername,newip,newport,FALSE);
-		      print_info_with_senderids(newusername,addedclient->uid,addedclient->uid);
-		    usernum++;
-		  }
+    	  if(message->iscomplete && me->isleader)
+    	  {
+    	    //	    printf("Immediately sequencing JOIN\n");
+    	    assign_sequence(message);
+    	  }
 
-	      }
-	    else
-	      print_info_with_senderids(newusername,"has joined the chat",newclient->uid);
-	  }
-
-	  if(message->iscomplete && me->isleader)
-	  {
-	    //	    printf("Immediately sequencing JOIN\n");
-	    assign_sequence(message);
-	  }
-
-	  process_late_sequence(message, newpacket);
-	  
-	  free_packet(newpacket);
-	  break;
-	default:
-	  printf("\nUnrecognized packet type: %d\n", newpacket->packettype);
-	  free_packet(newpacket);
-	}
+    	  process_late_sequence(message, newpacket);
+    	  
+    	  free_packet(newpacket);
+    	  break;
+    	default:
+    	  printf("\nUnrecognized packet type: %d\n", newpacket->packettype);
+    	  free_packet(newpacket);
+    	}
  
-    }//end of while
-    pthread_exit((void *)t);
+  }//end of while
+  pthread_exit((void *)t);
 }
 
 void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid[], char messagebody[], client_t* sendtoclient)
@@ -705,7 +694,8 @@ void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid
   other_addr.sin_family=AF_INET;
   other_addr.sin_port=htons(sendtoclient->portnum);
     
-  if (inet_pton(AF_INET, sendtoclient->hostname, &other_addr.sin_addr)==0) { //check2
+  if (inet_pton(AF_INET, sendtoclient->hostname, &other_addr.sin_addr)==0)
+  { //check2
     fprintf(stderr, "inet_pton() failed in send\n");
     shutdown(fd, SHUT_RDWR);
     close(fd);
@@ -722,7 +712,8 @@ void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid
     messageindex += MAXPACKETBODYLEN;
 
     sprintf(packetbuf, "%s%s%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, senderuid, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
-    if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &other_addr, sizeof(other_addr)) < 0) {
+    if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &other_addr, sizeof(other_addr)) < 0)
+    {
       fprintf(stderr, "sendto");
       exit(1);
     }
@@ -732,62 +723,66 @@ void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid
   pthread_mutex_unlock(&messaging_mutex);
 }
 
-void multicast_UDP(packettype_t packettype, char sender[], char senderuid[], char uid[], char messagebody[]){
+void multicast_UDP(packettype_t packettype, char sender[], char senderuid[], char uid[], char messagebody[])
+{
     
-    struct sockaddr_in addr;
-    int fd;
-    //    printf("prepping to send\n");
+  struct sockaddr_in addr;
+  int fd;
+  //    printf("prepping to send\n");
 
-    int totalpacketsrequired = (strlen(messagebody)) / 815; 
-    int remainder =  strlen(messagebody) % MAXPACKETBODYLEN; 
-    if(remainder > 0)
-      totalpacketsrequired++;
-    
-    fd = socket(PF_INET,SOCK_DGRAM,0);
-    
-    if (fd < 0) {
-        fprintf(stderr,"socket create failed");
-        exit(1);
-    }
-    
-    node_t* curr = CLIENTS->head;
-    char packetbodybuf[MAXPACKETBODYLEN];
-    char packetbuf[MAXPACKETLEN];
+  int totalpacketsrequired = (strlen(messagebody)) / 815; 
+  int remainder =  strlen(messagebody) % MAXPACKETBODYLEN; 
+  if(remainder > 0)
+    totalpacketsrequired++;
+  
+  fd = socket(PF_INET,SOCK_DGRAM,0);
+  
+  if (fd < 0)
+  {
+    fprintf(stderr,"socket create failed");
+    exit(1);
+  }
+  
+  node_t* curr = CLIENTS->head;
+  char packetbodybuf[MAXPACKETBODYLEN];
+  char packetbuf[MAXPACKETLEN];
 
-    //    printf("total packets required: %d\n", totalpacketsrequired);
-    pthread_mutex_lock(&messaging_mutex);
-    while(curr != NULL)
+  //    printf("total packets required: %d\n", totalpacketsrequired);
+  pthread_mutex_lock(&messaging_mutex);
+  while(curr != NULL)
+  {
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family=AF_INET;
+    addr.sin_port=htons(((client_t*)curr->elem)->portnum);
+    
+  	if (inet_pton(AF_INET,((client_t*)curr->elem)->hostname, &addr.sin_addr)==0)
     {
-      memset(&addr, 0, sizeof(addr));
-      addr.sin_family=AF_INET;
-      addr.sin_port=htons(((client_t*)curr->elem)->portnum);
-      
-    	if (inet_pton(AF_INET,((client_t*)curr->elem)->hostname, &addr.sin_addr)==0) {
-    	  fprintf(stderr, "inet_pton() failed in multicast\n");
-    	  curr = curr->next;
-    	  continue;
-    	  //	  exit(1);
-    	}
+  	  fprintf(stderr, "inet_pton() failed in multicast\n");
+  	  curr = curr->next;
+  	  continue;
+  	  //	  exit(1);
+  	}
 
 
-    	int messageindex = 0;
-    	int i;
-    	for(i = 0; i < totalpacketsrequired; i++)
-    	{
-    	  strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
-    	  messageindex += MAXPACKETBODYLEN;
+  	int messageindex = 0;
+  	int i;
+  	for(i = 0; i < totalpacketsrequired; i++)
+  	{
+  	  strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
+  	  messageindex += MAXPACKETBODYLEN;
 
-    	  sprintf(packetbuf, "%s%s%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, senderuid, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
-    	  if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-                fprintf(stderr, "sendto");
-                exit(1);
-    	  }
-       // printf("Just sent (%s)\n", messagebody);
-    	}
+  	  sprintf(packetbuf, "%s%s%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, senderuid, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
+  	  if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &addr, sizeof(addr)) < 0)
+      {
+        fprintf(stderr, "sendto");
+        exit(1);
+  	  }
+     // printf("Just sent (%s)\n", messagebody);
+  	}
 
-      curr = curr->next;
-    }
-    shutdown(fd, SHUT_RDWR);
-    close(fd);
-    pthread_mutex_unlock(&messaging_mutex);
+    curr = curr->next;
+  }
+  shutdown(fd, SHUT_RDWR);
+  close(fd);
+  pthread_mutex_unlock(&messaging_mutex);
 }
