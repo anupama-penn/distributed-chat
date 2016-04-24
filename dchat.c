@@ -172,25 +172,44 @@ void holdElection() {
       get_new_uid(uid);
       multicast_UDP(VOTE, me->username, me->uid, uid, "I_SHOULD_LEAD");
     }
-    if (countVotes() == CLIENTS->numnodes)
+  //  if (countVotes() == CLIENTS->numnodes)
+    if (countVotes() > CLIENTS->numnodes)
     {
       stage_coup(me->uid);
     }
     else
     {
-      if ((clock()-start > ELECTION_TIMEOUT_MS) && (countVotes() > (CLIENTS->numnodes / 2)) )
+    //  if ((clock()-start > ELECTION_TIMEOUT_MS) && (countVotes() > (CLIENTS->numnodes / 2)) )
+      if ((clock()-start > ELECTION_TIMEOUT_MS) && countVotes() > CLIENTS->numnodes)
       {
         // Handle timeout condition
         stage_coup(me->uid);
       }
     }
+    if (clock()-start > CATESTROPHIC_NETWORK_OUTAGE)
+    {
+      handle_major_network_outage_during_election();
+    }
     usleep(ELECTION_SLEEP_INTERVAL_uS);
   }
   while (!coup_propogated)
   {
-   //  printf("Waiting for election results...\n");
      usleep(ELECTION_SLEEP_INTERVAL_uS);
+     if (clock()-start > CATESTROPHIC_NETWORK_OUTAGE)
+     {
+       handle_major_network_outage_during_election();
+     }
   }
+}
+
+void handle_major_network_outage_during_election()
+{
+  if (UIRUNNING)
+  {
+    endUI();
+  }
+  printf("Catestrophic network outage! More than half of active clients went offline concurrently! Now exiting.\n");
+  exit(1);
 }
 
 void stage_coup(char incoming_power[])

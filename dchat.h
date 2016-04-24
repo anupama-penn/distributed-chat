@@ -40,6 +40,7 @@
 #define CHECKUP_INTERVAL 3
 #define CHECKUP_DEATH_TIMELIMIT 3
 #define QUORUM_TIMEOUT_MS 8000
+#define CATESTROPHIC_NETWORK_OUTAGE 30000000
 #define ELECTION_TIMEOUT_MS 8000
 #define ELECTION_SLEEP_INTERVAL_uS 100000
 
@@ -151,10 +152,7 @@ void *checkup_on_clients(void* t);
 
 bool check_quorum_on_client_death(char uid_death_row_inmate[]);
 
-//incomplete
 void holdElection();
-
-// add some way to check if client is alive
 
 bool initialize_data_structures();
 
@@ -162,10 +160,7 @@ void stage_coup(char incoming_power[]);
 
 void discover_ip(char ip[]);
 
-//void destroy_data_structures();
-
-// keep checking if sequencer is alive
-//int check();
+void handle_major_network_outage_during_election();
 
 //void shutdown();
 
