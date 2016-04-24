@@ -963,7 +963,7 @@ void initui(int isdebug)
     if(d == 4) //ctrl d
     {
       endUI();
-      exit(1);
+      exit(0);
     }
     else if(d == '\t')
     {

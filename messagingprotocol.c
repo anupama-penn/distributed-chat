@@ -722,8 +722,6 @@ void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid
     messageindex += MAXPACKETBODYLEN;
 
     sprintf(packetbuf, "%s%s%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, senderuid, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
-    //    sprintf(packetbuf, "%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
-    //	  printf("now sending %s to %s:%d\n",packetbuf, ((client_t*)curr->elem)->hostname, ((client_t*)curr->elem)->portnum);
     if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &other_addr, sizeof(other_addr)) < 0) {
       fprintf(stderr, "sendto");
       exit(1);
@@ -760,39 +758,36 @@ void multicast_UDP(packettype_t packettype, char sender[], char senderuid[], cha
     pthread_mutex_lock(&messaging_mutex);
     while(curr != NULL)
     {
-        memset(&addr, 0, sizeof(addr));
-        addr.sin_family=AF_INET;
-        addr.sin_port=htons(((client_t*)curr->elem)->portnum);
-        
-	if (inet_pton(AF_INET,((client_t*)curr->elem)->hostname, &addr.sin_addr)==0) {
-	  fprintf(stderr, "inet_pton() failed in multicast\n");
-	  curr = curr->next;
-	  continue;
-	  //	  exit(1);
-	}
+      memset(&addr, 0, sizeof(addr));
+      addr.sin_family=AF_INET;
+      addr.sin_port=htons(((client_t*)curr->elem)->portnum);
+      
+    	if (inet_pton(AF_INET,((client_t*)curr->elem)->hostname, &addr.sin_addr)==0) {
+    	  fprintf(stderr, "inet_pton() failed in multicast\n");
+    	  curr = curr->next;
+    	  continue;
+    	  //	  exit(1);
+    	}
 
 
-	int messageindex = 0;
-	int i;
-	for(i = 0; i < totalpacketsrequired; i++)
-	{
-	  strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
-	  messageindex += MAXPACKETBODYLEN;
+    	int messageindex = 0;
+    	int i;
+    	for(i = 0; i < totalpacketsrequired; i++)
+    	{
+    	  strncpy(packetbodybuf, messagebody+messageindex, MAXPACKETBODYLEN);
+    	  messageindex += MAXPACKETBODYLEN;
 
-	  sprintf(packetbuf, "%s%s%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, senderuid, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
-	  //	  printf("now sending %s to %s:%d\n",packetbuf, ((client_t*)curr->elem)->hostname, ((client_t*)curr->elem)->portnum);
-	  if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-            fprintf(stderr, "sendto");
-            exit(1);
-	  }
-   // printf("Just sent (%s)\n", messagebody);
-	}
+    	  sprintf(packetbuf, "%s%s%s%s%s%s%d%s%d%s%d%s%s", sender, PACKETDELIM, senderuid, PACKETDELIM, uid, PACKETDELIM, packettype, PACKETDELIM, i, PACKETDELIM, totalpacketsrequired, PACKETDELIM, packetbodybuf);
+    	  if (sendto(fd, packetbuf, sizeof(packetbuf), 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+                fprintf(stderr, "sendto");
+                exit(1);
+    	  }
+       // printf("Just sent (%s)\n", messagebody);
+    	}
 
-	curr = curr->next;
+      curr = curr->next;
     }
     shutdown(fd, SHUT_RDWR);
     close(fd);
     pthread_mutex_unlock(&messaging_mutex);
-    //close(fd);
 }
-

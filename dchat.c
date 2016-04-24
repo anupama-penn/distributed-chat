@@ -2,12 +2,7 @@
 #include "messagingprotocol.h"
 #include "clientmanagement.h"
 #include "messagemanagement.h"
-
 #include <ifaddrs.h>
-void error(char *x){
-  perror(x);
-  exit(1);
-}
 
 bool initialize_data_structures() {
     
@@ -48,25 +43,34 @@ void *get_user_input(void* t)
   int i = 0;
 
   if(UIRUNNING)
+  {
     initui(0);
+  }
   else
   {
     while(1)
     {
       if(fgets(userinput, sizeof(userinput), stdin) == NULL)
-	exit(1);
+      {
+        exit(0);
+      }
       if(userinput[0] == '\n')
-	continue;
+      {
+        continue;
+      }
+
       for(i = 0; i < strlen(userinput); i++)
       {
-	if(userinput[i]=='\n')
-	  userinput[i] = ' ';
+	      if(userinput[i]=='\n')
+        {
+          userinput[i] = ' ';
+        }
       }
-      //    scanf("%s",userinput);
-      //    usleep(10000);
+
       counter++;
       send_chat_message(counter, userinput);
     }
+
   }
   pthread_exit((void *)t);
 }

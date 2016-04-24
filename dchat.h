@@ -33,7 +33,7 @@
 #define MAXSENDERLEN 64
 #define MAXUIDLEN 128
 #define MAXPACKETLEN 1024
-#define MAXPACKETBODYLEN 815// MAXPACKETLEN-MAXSENDERLEN-MAXUIDLEN-(2*sizeof(int))-sizeof(int)-(5*sizeof(char))
+#define MAXPACKETBODYLEN 750// MAXPACKETLEN-MAXSENDERLEN-MAXUIDLEN-(2*sizeof(int))-sizeof(int)-(5*sizeof(char))
 #define MESSAGEMULTIPLIER 10
 #define MAXCHATMESSAGELEN MAXPACKETBODYLEN*MESSAGEMULTIPLIER
 #define JOIN_TIMELIMIT_MS 5000000
@@ -52,12 +52,6 @@
 #define FAIR_SEQ_WAIT 50000
 //#define FAIR_SEQ_WAIT 5000000 //for demonstration purposes
 
-/*enum bool_t
-{
-  FALSE=0,
-  TRUE=1
-};
-typedef enum bool_t bool_t;*/
 
 enum packettype { CHAT = 0, SEQUENCE = 1, CHECKUP = 2, ELECTION = 3, VOTE = 4, VICTORY = 5, JOIN_REQUEST = 6, LEADER_INFO = 7, JOIN = 8, EXIT = 9, QUORUMRESPONSE = 10, CONFIRMDEAD = 11, CONFIRMCOUP = 12};
 typedef enum packettype packettype_t;
@@ -98,14 +92,6 @@ typedef struct client_t {
 } client_t;
 
 
-//int isSequencer = 0;
-//int alloc_clients_size;
-
-//clist *clientlist;
-
-//cname userdata;
-//static char buf[1024];
-
 llist_t* UNSEQ_CHAT_MSGS;
 llist_t* CLIENTS;
 llist_t* STRAY_SEQ_MSGS;
@@ -130,9 +116,6 @@ pthread_mutex_t coup_propogated_mutex;
 
 bool DUMP_BACKLOG;
 
-//int LOCALPORT = DEFAULTPORT;
-//static bool INITIALIZED = FALSE;
-
 int num_clients_disagree_on_death_call;
 int num_clients_agree_on_death_call;
 
@@ -141,8 +124,6 @@ bool election_happening;
 bool coup_propogated; // Reset this global variable only before return of receipt of VICTORY message
 
 // Function Declarations
-
-void error(char*);
 
 void get_new_uid(char uid[]);
 
@@ -161,7 +142,3 @@ void stage_coup(char incoming_power[]);
 void discover_ip(char ip[]);
 
 void handle_major_network_outage_during_election();
-
-//void shutdown();
-
-//UI functions
