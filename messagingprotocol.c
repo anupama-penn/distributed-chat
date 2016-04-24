@@ -205,15 +205,20 @@ void process_late_sequence(chatmessage_t* message, packet_t* newpacket)
   return;
 }
 
-void join_chat(client_t* jointome)
+bool join_chat(client_t* jointome)
 {
   char uid[MAXUIDLEN];
   get_new_uid(uid);
   char mylocation[MAXPACKETBODYLEN];
   sprintf(mylocation,"%s:%d",LOCALHOSTNAME,LOCALPORT);
   printf("Sending JOIN_REQUEST %s to %s:%d\n", mylocation, jointome->hostname, jointome->portnum);
+  time_t start;
+  start = clock();
+  JOIN_SUCCESSFUL = FALSE;
   send_UDP(JOIN_REQUEST,LOCALUSERNAME,mylocation,uid,mylocation,jointome);
+  while(clock()-start < JOIN_TIMELIMIT_MS);
   free(jointome);
+  return JOIN_SUCCESSFUL;
 }
 
 void* receive_UDP(void* t)
@@ -626,6 +631,7 @@ void* receive_UDP(void* t)
 
 	    if(newport == LOCALPORT && strcmp(LOCALHOSTNAME,newip) == 0) //then I'm the guy who just joined
 	      {
+		JOIN_SUCCESSFUL = TRUE;
 		me = newclient;
 		pthread_mutex_unlock(&me_mutex);
 		int usernum = 1;

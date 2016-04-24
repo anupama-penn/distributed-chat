@@ -329,7 +329,14 @@ int main(int argc, char* argv[]){
     char* remoteport = argv[3];
     client_t* jointome = create_client("",remoteip,atoi(remoteport),TRUE);
     create_message_threads();
-    join_chat(jointome);
+    bool joined = join_chat(jointome);
+    if(joined == FALSE)
+    {
+      if(UIRUNNING)
+	endUI();
+      printf("Could not join chat. Bye bye.\n");
+      exit(1);
+    }
     while(1);
     return 0;
   }

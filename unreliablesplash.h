@@ -95,3 +95,4 @@ void print_msg_with_senderids(char* user, char message[], char uid[]);
 uimessage_t* add_msg_with_senderids(char* user, char message[], llist_t* msglist, int append, char uid[]);
 void print_info_with_senderids(char* user, char message[], char uid[]);
 void setborder(window_t* wnd);
+void endUI();

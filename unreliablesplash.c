@@ -962,11 +962,7 @@ void initui(int isdebug)
     d = wgetch(focuswnd->window);
     if(d == 4) //ctrl d
     {
-      del_wnd(splashwnd);
-      del_wnd(infownd);
-      del_wnd(inputwnd);
-      del_wnd(msgwnd);
-      endwin();
+      endUI();
       exit(1);
     }
     else if(d == '\t')
@@ -1072,6 +1068,16 @@ void initui(int isdebug)
     }
   }
   
+}
+
+
+void endUI()
+{
+  del_wnd(splashwnd);
+  del_wnd(infownd);
+  del_wnd(inputwnd);
+  del_wnd(msgwnd);
+  endwin();
 }
 
 /*int main(int argc, char** argv)
