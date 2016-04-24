@@ -212,12 +212,14 @@ bool join_chat(client_t* jointome)
   char mylocation[MAXPACKETBODYLEN];
   sprintf(mylocation,"%s:%d",LOCALHOSTNAME,LOCALPORT);
   printf("Sending JOIN_REQUEST %s to %s:%d\n", mylocation, jointome->hostname, jointome->portnum);
-  time_t start;
+  clock_t start;
   start = clock();
+//  printf("Start yo: %d\n", clock()-start);
   JOIN_SUCCESSFUL = FALSE;
   send_UDP(JOIN_REQUEST,LOCALUSERNAME,mylocation,uid,mylocation,jointome);
-  while(clock()-start < JOIN_TIMELIMIT_MS);
+  while(clock()-start < JOIN_TIMELIMIT_MS && JOIN_SUCCESSFUL == FALSE);
   free(jointome);
+ // printf("Am done? %d\n",clock()-start);
   return JOIN_SUCCESSFUL;
 }
 
