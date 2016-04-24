@@ -62,27 +62,6 @@ void dump_backlog()
       curr = curr->next;
     }
     pthread_mutex_unlock(&UNSEQ_CHAT_MSGS->mutex);
-    /*    curr = UNSEQ_CHAT_MSGS->head;
-    int index = 0;
-    while(curr != NULL)
-    {
-      chatmessage_t* chatmessage = (chatmessage_t*)curr->elem;
-      if(chatmessage->iscomplete)
-      {
-	printf("removing node %d\n",index);
-	node_t* next = curr->next;
-	remove_node(UNSEQ_CHAT_MSGS,curr);
-	curr = next;
-      }
-      else
-      {
-	printf("not removing node %d\n",index);
-	curr = curr->next;
-      }
-      index++;
-    }
-    printf("CLEARED BACKLOG\n");*/
-    //    pthread_mutex_unlock(&UNSEQ_CHAT_MSGS->mutex);
     return;
 }
 
