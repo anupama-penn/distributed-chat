@@ -446,7 +446,9 @@ void* receive_UDP(void* t)
 	  break;
 	case CONFIRMCOUP:
 	  // Update this nodes coup_propogated global
+    pthread_mutex_lock(&coup_propogated_mutex);
 	  coup_propogated = TRUE;
+    pthread_mutex_unlock(&coup_propogated_mutex);
 	  free_packet(newpacket);
 	  break;
 	case QUORUMRESPONSE:

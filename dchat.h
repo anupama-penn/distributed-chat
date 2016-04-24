@@ -125,6 +125,7 @@ pthread_mutex_t seqno_mutex;
 pthread_mutex_t me_mutex;
 pthread_mutex_t missed_checkups_mutex;
 pthread_mutex_t election_happening_mutex;
+pthread_mutex_t coup_propogated_mutex;
 
 bool DUMP_BACKLOG;
 

@@ -159,7 +159,9 @@ int countVotes() {
 
 void holdElection() {
   me->isCandidate = TRUE;
+  pthread_mutex_lock(&coup_propogated_mutex);
   coup_propogated = FALSE;
+  pthread_mutex_unlock(&coup_propogated_mutex);
   time_t start;
   start = clock();
   while (election_happening)
@@ -309,6 +311,7 @@ int main(int argc, char* argv[]){
   pthread_mutex_init(&me_mutex,NULL);
   pthread_mutex_init(&missed_checkups_mutex,NULL);
   pthread_mutex_init(&election_happening_mutex,NULL);
+  pthread_mutex_init(&coup_propogated_mutex,NULL);
 
   initialize_data_structures();
   char ip[NI_MAXHOST];
