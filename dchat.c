@@ -244,22 +244,16 @@ bool check_quorum_on_client_death(char uid_death_row_inmate[]){
   if (CLIENTS->numnodes == 2)
   {
     //It's just me and the dead client so I only need one response
-    while (((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < 1) && (clock()-start < QUORUM_TIMEOUT_MS) )
-    {
-    }
+    while (((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < 1) && (clock()-start < QUORUM_TIMEOUT_MS) );
   }
   else if (CLIENTS->numnodes == 3)
   {
     //It's me, the dead client, and one alive client so I need two responses
-    while (((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < 2) && (clock()-start < QUORUM_TIMEOUT_MS) )
-    {
-    }
+    while (((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < 2) && (clock()-start < QUORUM_TIMEOUT_MS) );
   }
   else
   {
-    while (((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < (CLIENTS->numnodes / 2)) && (clock()-start < QUORUM_TIMEOUT_MS) )
-    {
-    }
+    while (((num_clients_agree_on_death_call + num_clients_disagree_on_death_call) < (CLIENTS->numnodes / 2)) && (clock()-start < QUORUM_TIMEOUT_MS) );
   }
 
   if ((num_clients_agree_on_death_call - num_clients_disagree_on_death_call) > 0)

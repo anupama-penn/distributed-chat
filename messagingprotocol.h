@@ -7,7 +7,6 @@
 
 pthread_mutex_t messaging_mutex;
 
-
 packet_t* parsePacket(char*);
 void free_packet(packet_t* packet);
 void *receive_UDP(void* t);

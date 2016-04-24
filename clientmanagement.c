@@ -1,6 +1,7 @@
 #include "clientmanagement.h"
 
-void print_client_list() {
+void print_client_list()
+{
   int numclients = CLIENTS->numnodes;
   printf("Total # of Clients:\t%d\n", numclients);
 
