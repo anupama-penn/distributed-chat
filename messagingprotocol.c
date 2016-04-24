@@ -620,7 +620,8 @@ void* receive_UDP(void* t)
 	  //figure out if this corresponds to an existing chatmessage
 	  message = find_chatmessage(newpacket->uid);
 	  message = process_packet(message,newpacket);
-
+		char * dec_join = decrypt(message->messagebody);
+            strcpy(message->messagebody,dec_join);
 	  if(message->iscomplete)
 	  {
 
