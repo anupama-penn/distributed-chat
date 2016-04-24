@@ -516,10 +516,10 @@ void* receive_UDP(void* t)
 	      }
 	      curr = curr->next;
 	    }
-	    if(leader == NULL)
+	    if(leader == NULL) //don't respond. Let the new joiner timeout.
 	    {
-	      printf("Can't process JOIN_REQUEST. Don't know who the leader is!!!\n");
-	      send_UDP(LEADER_INFO,me->username,me->uid,uid,"",newguy);
+	      //	      printf("Can't process JOIN_REQUEST. Don't know who the leader is!!!\n");
+	      //	      send_UDP(LEADER_INFO,me->username,me->uid,uid,"",newguy);
 	      free(newguy);
 	      free_packet(newpacket);
 	      break;
