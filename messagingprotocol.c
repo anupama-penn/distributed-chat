@@ -321,8 +321,6 @@ void* receive_UDP(void* t)
 	  if (strcmp(newpacket->packetbody,"ARE_YOU_ALIVE") == 0)
 	  {
 	    // send udp message to sender saying that this client is still alive
-	    // printf("I (%s) am gonna send alive response to (%s)\n", me->username, newpacket->sender);
-	    
 	    client_t* orig_sender = find_client_by_uid(newpacket->senderuid);
 	    if (orig_sender != NULL)
 	    {
@@ -332,14 +330,12 @@ void* receive_UDP(void* t)
 	  else if (strcmp(newpacket->packetbody, "I_AM_ALIVE") == 0)
 	  {
 	    // reset sender's counter back to zero
-	    // printf("Got living confirmation from (%s)\n", newpacket->sender);
-	    
 	    client_t* orig_sender = find_client_by_uid(newpacket->senderuid);
 	    if (orig_sender != NULL)
 	    {
-        	pthread_mutex_lock(&missed_checkups_mutex);
+        pthread_mutex_lock(&missed_checkups_mutex);
 	    	orig_sender->missed_checkups = 0;
-        	pthread_mutex_unlock(&missed_checkups_mutex);
+        pthread_mutex_unlock(&missed_checkups_mutex);
 	    }
 	  }
 	  else
@@ -350,10 +346,10 @@ void* receive_UDP(void* t)
 	  free_packet(newpacket);
 	  break;
 	case ELECTION:
-   	  pthread_mutex_lock(&election_happening_mutex);
-  	  election_happening = TRUE;
-      pthread_mutex_unlock(&election_happening_mutex);
-      clear_deference();
+   	pthread_mutex_lock(&election_happening_mutex);
+  	election_happening = TRUE;
+    pthread_mutex_unlock(&election_happening_mutex);
+    clear_deference();
 	  free(newpacket);
 	  break;
 	case VOTE:
@@ -361,7 +357,7 @@ void* receive_UDP(void* t)
     {
     	//iterate over all clients and update their local deference accordingly
     	pthread_mutex_lock(&CLIENTS->mutex);
-   	    pthread_mutex_lock(&client_deference_mutex);
+   	  pthread_mutex_lock(&client_deference_mutex);
     	client_t* client;
   		node_t* curr = CLIENTS->head;
   		while(curr != NULL)
@@ -398,7 +394,7 @@ void* receive_UDP(void* t)
 			curr = curr->next;
   		}
   		pthread_mutex_unlock(&CLIENTS->mutex);
-      	pthread_mutex_unlock(&client_deference_mutex);
+      pthread_mutex_unlock(&client_deference_mutex);
 
     }
     free_packet(newpacket);
@@ -408,33 +404,33 @@ void* receive_UDP(void* t)
 	  {
 
 	  	client_t* client;
-		pthread_mutex_lock(&CLIENTS->mutex);
-  	  	node_t* curr = CLIENTS->head;
-  	  	while(curr != NULL)
-  	  	{
+		  pthread_mutex_lock(&CLIENTS->mutex);
+  	  node_t* curr = CLIENTS->head;
+  	  while(curr != NULL)
+  	  {
     		client = ((client_t*)curr->elem);
     		if (strcmp(newpacket->packetbody, client->uid) == 0 && (client->isleader == FALSE))
-			{
-		  		pthread_mutex_lock(&seqno_mutex);
-		  		pthread_mutex_lock(&dump_backlog_mutex);
-				if(client == me)
-				{
-		  		  LEADER_SEQ_NO = SEQ_NO;
-				  DUMP_BACKLOG = TRUE;
-				}
-		  		pthread_mutex_unlock(&dump_backlog_mutex);
-		  		pthread_mutex_unlock(&seqno_mutex);
-				pthread_mutex_lock(&me_mutex);
-		  		client->isleader = TRUE;
-		  		pthread_mutex_unlock(&me_mutex);
-		  		coup_propogated = TRUE;
-		  		char uid[MAXUIDLEN];
-    			get_new_uid(uid);
-		  		multicast_UDP(CONFIRMCOUP,me->username, me->uid, uid, "LONG_LIVE_THE_NEW_KING"); 
-		  		break;
-			}
-      		curr = curr->next;
-  	  	}
+  			{
+    		  pthread_mutex_lock(&seqno_mutex);
+    		  pthread_mutex_lock(&dump_backlog_mutex);
+    			if(client == me)
+    			{
+    		  	LEADER_SEQ_NO = SEQ_NO;
+    				DUMP_BACKLOG = TRUE;
+    			}
+    		  pthread_mutex_unlock(&dump_backlog_mutex);
+    		  pthread_mutex_unlock(&seqno_mutex);
+    			pthread_mutex_lock(&me_mutex);
+    		  client->isleader = TRUE;
+    		  pthread_mutex_unlock(&me_mutex);
+    		  coup_propogated = TRUE;
+    		  char uid[MAXUIDLEN];
+        	get_new_uid(uid);
+    		  multicast_UDP(CONFIRMCOUP,me->username, me->uid, uid, "LONG_LIVE_THE_NEW_KING"); 
+    		  break;
+  			}
+      	curr = curr->next;
+  	  }
 		pthread_mutex_unlock(&CLIENTS->mutex);
 
 	  }
