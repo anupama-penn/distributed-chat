@@ -302,6 +302,14 @@ void discover_ip(char ip[]){
 int main(int argc, char* argv[]){
     
   splash();
+
+  pthread_mutex_init(&dump_backlog_mutex,NULL);
+  pthread_mutex_init(&counter_mutex,NULL);
+  pthread_mutex_init(&seqno_mutex,NULL);
+  pthread_mutex_init(&me_mutex,NULL);
+  pthread_mutex_init(&missed_checkups_mutex,NULL);
+  pthread_mutex_init(&election_happening_mutex,NULL);
+
   initialize_data_structures();
   char ip[NI_MAXHOST];
   discover_ip(ip);

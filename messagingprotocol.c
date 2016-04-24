@@ -145,8 +145,8 @@ void sequence(chatmessage_t* message, packet_t* newpacket)
   }
   if(firstmessage->seqnum > SEQ_NO)
   {
-    printf("SEQUENCE OUT OF SYNC. Skipping Ahead by %d messages\n",firstmessage->seqnum-SEQ_NO);
-    SEQ_NO = firstmessage->seqnum;
+    printf("SEQUENCE OUT OF SYNC. Skipping Ahead by %d messages\n",firstmessage->seqnum-SEQ_NO); 
+   SEQ_NO = firstmessage->seqnum;
   }
   if(firstmessage->seqnum <= SEQ_NO)
   {

@@ -27,6 +27,7 @@ int getRightChild(int index) {
 queue_t *init(int (*cmp)(void *m1, void *m2), size_t init_capacity) {
     queue_t *q = NULL;
     q = malloc(sizeof(queue_t));
+    pthread_mutex_init(&q->mutex,NULL);
     if(cmp == NULL || q == NULL) {
       return NULL;
     }

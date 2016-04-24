@@ -21,8 +21,7 @@
 #include "send_msg.h"
 #include "unreliablesplash.h"
 
-#define QUEUE_SIZE 128
-#define INITIAL_CLIENT_COUNT 8
+#define QUEUE_SIZE 1024
 #define MSGBUFSIZE 256
 
 #define RECEIVE_THREADNUM 0
