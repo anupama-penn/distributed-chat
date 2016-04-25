@@ -14,7 +14,7 @@
  
 */
 
-long int flag, e[100], d[100], j, i,temp[100];
+long int flag, e[100], d[100], j, i,temp[8192];
 
 long int p = 337;
 long int q = 47;
@@ -39,8 +39,8 @@ char * encrypt();
 char * decrypt();
 
 
-char encrypting[1024];
-char decrypting[1024];
+char encrypting[8192];
+char decrypting[8192];
 
 int prime(long int pr)
 {
@@ -67,13 +67,13 @@ long int private_key(long int x)
 
 char * encrypt(char encrypting[])
 {
-    long int encrypted[100];
+    long int encrypted[8192];
 
-    char *buf = malloc(1024);
-    memset(buf,0,1024);
+    char *buf = malloc(8192);
+    memset(buf,0,8192);
 
-    char *temp_buf = malloc(1024);
-    memset(temp_buf,0,1024);
+    char *temp_buf = malloc(8192);
+    memset(temp_buf,0,8192);
 
     int variable = 0;
 
@@ -154,13 +154,13 @@ char * encrypt(char encrypting[])
 char* decrypt(char decrypting[])
 {
 
-    char *buf_decrypt = malloc(1024);
-    memset(buf_decrypt,0,1024);
+    char *buf_decrypt = malloc(8192);
+    memset(buf_decrypt,0,8192);
 
-    char value1[1024], value2[1024];
+    char value1[8192], value2[8192];
 
-    bzero(value1,1024);
-    bzero(value2,1024);
+    bzero(value1,8192);
+    bzero(value2,8192);
 
     //value 1 is encrypted[i]
 
@@ -172,8 +172,8 @@ char* decrypt(char decrypting[])
     strcpy(value2,strtok(NULL,delimiter2));
 //    printf("value2 is : %s\n",value2);
 
- int tokens1[1024]= {0};
-    int tokens2[1024]= {0};
+    int tokens1[8192]= {0};
+    int tokens2[8192]= {0};
 
     int n1 =0, a1 = 0, n2 =0, a2 =0;
 
@@ -196,7 +196,7 @@ char* decrypt(char decrypting[])
 //    }
 
     long int temp_variable, count, key = d[0], local_temp;
-    char packetbuf1[1024];
+    char packetbuf1[8192];
     i = 0;
  while (tokens1[i] != 0)
     {

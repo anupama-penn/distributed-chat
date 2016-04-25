@@ -23,6 +23,7 @@ void free_packet(packet_t* packet)
   return;
 }
 
+int delay = 1;
 
 chatmessage_t* process_packet(chatmessage_t* message, packet_t* newpacket)
 {
@@ -267,6 +268,22 @@ void* receive_UDP(void* t)
 	char newusername[MAXSENDERLEN];
 	char newip[MAXPACKETBODYLEN];
 	int newport;
+
+	char* dec= decrypt(newpacket->packetbody);
+	strcpy(newpacket->packetbody,dec);
+//	printf(" DECRYPTED MESSAGE IS: %s\n",dec);
+	//printf("check2");
+
+	//char whoami[MAXSENDERLEN];
+	//strcpy(whosent,newpacket->sender);
+	//printf("who sent it? :%s\n",whosent);	
+
+	
+	
+	// if (me->isleader) {
+       	//     printf("i am leader");
+    	 //   }
+
 	node_t* curr = STRAY_SEQ_MSGS->head;
 	//figure out what type of packet this is and act accordingly	
 
@@ -278,10 +295,10 @@ void* receive_UDP(void* t)
 	  message = find_chatmessage(newpacket->uid);
 	  message = process_packet(message,newpacket);
 
-       	    char * dec_chat = decrypt(message->messagebody);
-            strcpy(message->messagebody,dec_chat);
-            //printf("please decrypted message is : %s\n", msgbody_send);
-
+//	char *dec_chat = decrypt(message->messagebody);
+//	strcpy(message->messagebody,dec_chat);
+	
+printf(" DECRYPTED MESSAGE IS: %s\n",message->messagebody);		
 	  if(message->iscomplete && me->isleader)
 	  {
 	    client_t* sendingclient = find_client_by_uid(newpacket->senderuid);
@@ -291,7 +308,7 @@ void* receive_UDP(void* t)
 
 	  //for now, just print if it's complete
 	  if(message->iscomplete)
-	    printf("\E[33m%s\E(B\E[m (not bak sequenced yet):\t%s\n", message->sender, message->messagebody);
+	    printf("\E[33m%s\E(B\E[m (not sequenced yet):\t%s\n", message->sender, message->messagebody);
 
 	  //check the stray sequencing list. If there's already something in there that matches, remove it and add the message to the priority queue.
 	  process_late_sequence(message, newpacket);
@@ -299,10 +316,14 @@ void* receive_UDP(void* t)
 	  free_packet(newpacket);
 	  break;
 	case SEQUENCE:
+	
+	// char* dec= decrypt(newpacket->packetbody);
+        // strcpy(newpacket->packetbody,dec);
 	  //This is a sequencing message. Find the corresponding chat message in the unsequenced message list and enqueue it properly
 	  message = find_chatmessage(newpacket->uid);
 	  
-		//char * dec_sequence = decrypt(message->messagebody);
+	
+      // char * dec_sequence = decrypt(message->messagebody);
             //strcpy(message->messagebody,dec_sequence);
 
 	  //If the corresponding message is not complete, ask the leader for its missing part first. It will be received as a chat. TODO
@@ -620,8 +641,9 @@ void* receive_UDP(void* t)
 	  //figure out if this corresponds to an existing chatmessage
 	  message = find_chatmessage(newpacket->uid);
 	  message = process_packet(message,newpacket);
-		char * dec_join = decrypt(message->messagebody);
-            strcpy(message->messagebody,dec_join);
+//	char *dec_join = decrypt(message->messagebody);
+//	strcpy(message->messagebody,dec_join);
+
 	  if(message->iscomplete)
 	  {
 
@@ -688,6 +710,7 @@ void* receive_UDP(void* t)
 
 void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid[], char messagebody[], client_t* sendtoclient)
 {
+  usleep(delay);
     
   char packetbodybuf[MAXPACKETBODYLEN];
   char packetbuf[MAXPACKETLEN];
@@ -704,7 +727,8 @@ void send_UDP(packettype_t packettype, char sender[], char senderuid[], char uid
   char * send = encrypt(messagebody);
         char msgbody[MAXCHATMESSAGELEN];
         strcpy(msgbody,send);
-//      printf("encrypted message in multicast is : %s\n", msgbody);
+	printf("ENCRYPTED MESSAGE IS : %s\n", msgbody);
+ //     printf("encrypted message in send is : %s\n", msgbody);
 
   int totalpacketsrequired = (strlen(msgbody)) / 815;
   int remainder =  strlen(msgbody) % MAXPACKETBODYLEN;
@@ -753,7 +777,7 @@ void multicast_UDP(packettype_t packettype, char sender[], char senderuid[], cha
 	char * multicast = encrypt(messagebody);
         char msgbody[MAXCHATMESSAGELEN];
         strcpy(msgbody,multicast);
-//      printf("encrypted message in multicast is : %s\n", msgbody);
+     	//printf("ENCRYPTED MESSAGE IS : %s\n", msgbody);
   
     int totalpacketsrequired = (strlen(msgbody)) / 815; 
     int remainder =  strlen(msgbody) % MAXPACKETBODYLEN; 
